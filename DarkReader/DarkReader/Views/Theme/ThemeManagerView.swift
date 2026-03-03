@@ -40,7 +40,7 @@ struct ThemeManagerView: View {
                                     theme: theme,
                                     isDefault: theme.id == dataManager.globalConfig.defaultThemeId,
                                     onSetDefault: { setDefault(theme) },
-                                    onEdit: nil,
+                                    onEdit: { editTheme(theme) },
                                     onDelete: nil
                                 )
                             }
@@ -245,6 +245,10 @@ struct ThemeCard: View {
                         }
                     }
                 }
+                .contentShape(Rectangle())
+                .onTapGesture {
+                    onSetDefault?()
+                }
 
                 HStack(spacing: 8) {
                     VStack(alignment: .leading, spacing: 3) {
@@ -255,24 +259,38 @@ struct ThemeCard: View {
                             .font(SustainabilityTypography.caption)
                             .foregroundColor(isDefault ? SustainabilityPalette.primary : .secondary)
                     }
+                    .contentShape(Rectangle())
+                    .onTapGesture {
+                        onSetDefault?()
+                    }
 
                     Spacer()
 
-                    if onEdit != nil || onDelete != nil || onSetDefault != nil {
-                        Menu {
-                            if !isDefault, let onSetDefault {
-                                Button("设为默认", systemImage: "checkmark.circle") { onSetDefault() }
+                    HStack(spacing: 6) {
+                        if let onEdit {
+                            Button(action: onEdit) {
+                                Image(systemName: "slider.horizontal.3")
+                                    .font(SustainabilityTypography.subBodyStrong)
+                                    .foregroundColor(SustainabilityPalette.cta)
+                                    .frame(width: 32, height: 32)
+                                    .background(SustainabilityPalette.cta.opacity(0.16))
+                                    .clipShape(Circle())
                             }
-                            if let onEdit {
-                                Button("编辑", systemImage: "pencil") { onEdit() }
+                            .buttonStyle(.plain)
+                            .accessibilityLabel("主题详情")
+                        }
+
+                        if let onDelete {
+                            Button(role: .destructive, action: onDelete) {
+                                Image(systemName: "trash")
+                                    .font(SustainabilityTypography.captionStrong)
+                                    .foregroundColor(.secondary)
+                                    .frame(width: 32, height: 32)
+                                    .background(Color.secondary.opacity(0.14))
+                                    .clipShape(Circle())
                             }
-                            if let onDelete {
-                                Button("删除", systemImage: "trash", role: .destructive) { onDelete() }
-                            }
-                        } label: {
-                            Image(systemName: "ellipsis.circle")
-                                .font(SustainabilityTypography.title)
-                                .foregroundColor(.secondary)
+                            .buttonStyle(.plain)
+                            .accessibilityLabel("删除主题")
                         }
                     }
                 }
@@ -289,9 +307,6 @@ struct ThemeCard: View {
                     .padding(.trailing, 4)
                 }
             }
-        }
-        .onTapGesture {
-            onSetDefault?()
         }
     }
 }

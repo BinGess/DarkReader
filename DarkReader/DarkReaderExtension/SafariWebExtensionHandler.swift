@@ -240,6 +240,8 @@ private class ExtensionDataStore {
                 "secondaryTextColor": theme.secondaryTextColor,
                 "linkColor": theme.linkColor,
                 "borderColor": theme.borderColor,
+                "imageBrightness": theme.imageBrightness,
+                "imageGrayscale": theme.imageGrayscale,
                 "dimImages": config.dimImages
             ] as [String: Any]
         ]
@@ -256,7 +258,9 @@ private class ExtensionDataStore {
                 "textColor": theme.textColor,
                 "secondaryTextColor": theme.secondaryTextColor,
                 "linkColor": theme.linkColor,
-                "borderColor": theme.borderColor
+                "borderColor": theme.borderColor,
+                "imageBrightness": theme.imageBrightness,
+                "imageGrayscale": theme.imageGrayscale
             ] as [String: Any]
         }
     }

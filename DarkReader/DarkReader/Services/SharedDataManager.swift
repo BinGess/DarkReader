@@ -531,6 +531,8 @@ extension SharedDataManager {
                 "secondaryTextColor": effectiveTheme.secondaryTextColor,
                 "linkColor": effectiveTheme.linkColor,
                 "borderColor": effectiveTheme.borderColor,
+                "imageBrightness": effectiveTheme.imageBrightness,
+                "imageGrayscale": effectiveTheme.imageGrayscale,
                 "dimImages": globalConfig.dimImages
             ] as [String: Any]
         ]

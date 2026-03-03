@@ -560,6 +560,8 @@ struct WebsiteSettingDetailView: View {
                 secondaryTextColor: secondaryTextColor.toHexString() ?? "#999999",
                 linkColor: linkColor.toHexString() ?? "#4da6ff",
                 borderColor: borderColor.toHexString() ?? "#444444",
+                imageBrightness: existing?.imageBrightness ?? 0.75,
+                imageGrayscale: existing?.imageGrayscale ?? 0.0,
                 isBuiltin: false,
                 createdAt: existing?.createdAt ?? Date(),
                 updatedAt: Date()

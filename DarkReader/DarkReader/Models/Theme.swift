@@ -24,6 +24,10 @@ struct DarkTheme: Codable, Identifiable, Equatable {
     var linkColor: String
     // 边框与分割线颜色
     var borderColor: String
+    // 网页图片亮度（0.35...1.0）
+    var imageBrightness: Double
+    // 网页图片灰度（0...1）
+    var imageGrayscale: Double
     // 是否为内置主题（内置主题不可删除/修改）
     let isBuiltin: Bool
     // 创建时间（用于排序）
@@ -70,6 +74,8 @@ struct DarkTheme: Codable, Identifiable, Equatable {
         case secondaryTextColor
         case linkColor
         case borderColor
+        case imageBrightness
+        case imageGrayscale
         case isBuiltin
         case createdAt
         case updatedAt
@@ -83,6 +89,8 @@ struct DarkTheme: Codable, Identifiable, Equatable {
         secondaryTextColor: String,
         linkColor: String,
         borderColor: String,
+        imageBrightness: Double = 0.75,
+        imageGrayscale: Double = 0.0,
         isBuiltin: Bool,
         createdAt: Date,
         updatedAt: Date = Date()
@@ -94,6 +102,8 @@ struct DarkTheme: Codable, Identifiable, Equatable {
         self.secondaryTextColor = secondaryTextColor
         self.linkColor = linkColor
         self.borderColor = borderColor
+        self.imageBrightness = min(max(imageBrightness, 0.35), 1.0)
+        self.imageGrayscale = min(max(imageGrayscale, 0.0), 1.0)
         self.isBuiltin = isBuiltin
         self.createdAt = createdAt
         self.updatedAt = updatedAt
@@ -108,6 +118,14 @@ struct DarkTheme: Codable, Identifiable, Equatable {
         self.secondaryTextColor = try container.decode(String.self, forKey: .secondaryTextColor)
         self.linkColor = try container.decode(String.self, forKey: .linkColor)
         self.borderColor = try container.decode(String.self, forKey: .borderColor)
+        self.imageBrightness = min(
+            max(try container.decodeIfPresent(Double.self, forKey: .imageBrightness) ?? 0.75, 0.35),
+            1.0
+        )
+        self.imageGrayscale = min(
+            max(try container.decodeIfPresent(Double.self, forKey: .imageGrayscale) ?? 0.0, 0.0),
+            1.0
+        )
         self.isBuiltin = try container.decode(Bool.self, forKey: .isBuiltin)
         self.createdAt = try container.decodeIfPresent(Date.self, forKey: .createdAt) ?? Date(timeIntervalSince1970: 0)
         self.updatedAt = try container.decodeIfPresent(Date.self, forKey: .updatedAt) ?? self.createdAt
@@ -122,6 +140,8 @@ struct DarkTheme: Codable, Identifiable, Equatable {
         try container.encode(secondaryTextColor, forKey: .secondaryTextColor)
         try container.encode(linkColor, forKey: .linkColor)
         try container.encode(borderColor, forKey: .borderColor)
+        try container.encode(imageBrightness, forKey: .imageBrightness)
+        try container.encode(imageGrayscale, forKey: .imageGrayscale)
         try container.encode(isBuiltin, forKey: .isBuiltin)
         try container.encode(createdAt, forKey: .createdAt)
         try container.encode(updatedAt, forKey: .updatedAt)
@@ -599,11 +619,15 @@ extension Color {
 
     /// 将 Color 转换为十六进制字符串（"#RRGGBB"）
     func toHexString() -> String? {
-        guard let components = UIColor(self).cgColor.components,
-              components.count >= 3 else { return nil }
-        let r = Int(components[0] * 255.0)
-        let g = Int(components[1] * 255.0)
-        let b = Int(components[2] * 255.0)
-        return String(format: "#%02x%02x%02x", r, g, b)
+        let uiColor = UIColor(self)
+        var r: CGFloat = 0
+        var g: CGFloat = 0
+        var b: CGFloat = 0
+        var a: CGFloat = 0
+        guard uiColor.getRed(&r, green: &g, blue: &b, alpha: &a) else { return nil }
+        let red = Int(r * 255.0)
+        let green = Int(g * 255.0)
+        let blue = Int(b * 255.0)
+        return String(format: "#%02x%02x%02x", red, green, blue)
     }
 }

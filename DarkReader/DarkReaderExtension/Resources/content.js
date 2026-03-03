@@ -240,8 +240,24 @@
       secondaryTextColor,
       linkColor,
       borderColor,
+      imageBrightness,
+      imageGrayscale,
       dimImages
     } = theme;
+    const clamp = (value, min, max) => Math.min(Math.max(value, min), max);
+    const normalizedBrightness = clamp(
+      Number.isFinite(imageBrightness) ? imageBrightness : (dimImages ? 0.75 : 1.0),
+      0.35,
+      1.0
+    );
+    const normalizedGrayscale = clamp(
+      Number.isFinite(imageGrayscale) ? imageGrayscale : 0.0,
+      0.0,
+      1.0
+    );
+    const shouldFilterImages = dimImages || normalizedBrightness < 0.999 || normalizedGrayscale > 0.001;
+    const imageFilter = `brightness(${normalizedBrightness.toFixed(2)}) grayscale(${Math.round(normalizedGrayscale * 100)}%)`;
+    const iconBrightness = clamp(normalizedBrightness + 0.08, 0.4, 1.0);
 
     let css = `
 /* ===== DarkReader 深色主题 ===== */
@@ -362,20 +378,20 @@ hr {
 }
 `;
 
-    // 图片暗化（通过 brightness 滤镜，不反色）
-    if (dimImages) {
+    // 图片调节（亮度 + 灰度）
+    if (shouldFilterImages) {
       css += `
-/* ── 图片/媒体亮度降低（保留细节，不反色） ── */
+/* ── 图片/媒体调节（亮度 + 灰度） ── */
 img:not([src*="data:image/svg"]),
 video,
 canvas:not([class*="chart"]):not([class*="graph"]) {
-  filter: brightness(0.75) !important;
-  -webkit-filter: brightness(0.75) !important;
+  filter: ${imageFilter} !important;
+  -webkit-filter: ${imageFilter} !important;
 }
 
 /* SVG 图标稍微暗化，保留可读性 */
 svg {
-  filter: brightness(0.85) !important;
+  filter: brightness(${iconBrightness.toFixed(2)}) !important;
 }
 `;
     }
@@ -442,6 +458,8 @@ svg {
       secondaryTextColor: '#999999',
       linkColor: '#4da6ff',
       borderColor: '#444444',
+      imageBrightness: 0.75,
+      imageGrayscale: 0.0,
       dimImages: true
     };
     currentConfig = { mode: 'auto', dimImages: true, ignoreNativeDarkMode: false, siteRules: {} };

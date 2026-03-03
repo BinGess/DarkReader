@@ -2,7 +2,7 @@
 //  ThemeEditorView.swift
 //  DarkReader
 //
-//  自定义主题编辑器：5个颜色选择器 + 实时预览
+//  主题详情页：预览、名称、颜色设置、图像设置
 //
 
 import SwiftUI
@@ -11,22 +11,25 @@ struct ThemeEditorView: View {
     @EnvironmentObject var dataManager: SharedDataManager
     @Environment(\.dismiss) private var dismiss
 
-    // 如果是编辑现有主题则传入，否则为 nil（新建）
     let existingTheme: DarkTheme?
 
-    // 编辑中的颜色值
     @State private var name: String = ""
     @State private var backgroundColor: Color = Color(hex: "#1e1e1e")!
     @State private var textColor: Color = Color(hex: "#e0e0e0")!
-    @State private var secondaryTextColor: Color = Color(hex: "#999999")!
-    @State private var linkColor: Color = Color(hex: "#4da6ff")!
-    @State private var borderColor: Color = Color(hex: "#444444")!
+    @State private var imageBrightness: Double = 0.75
+    @State private var imageGrayscale: Double = 0.0
 
-    // 校验
     @State private var nameError: String? = nil
     @State private var colorError: String? = nil
 
-    var isEditing: Bool { existingTheme != nil }
+    private var isEditingCustomTheme: Bool {
+        guard let existingTheme else { return false }
+        return !existingTheme.isBuiltin
+    }
+
+    private var titleText: String {
+        existingTheme == nil ? "新建主题" : "主题详情"
+    }
 
     var body: some View {
         NavigationView {
@@ -34,57 +37,86 @@ struct ThemeEditorView: View {
                 SustainabilityBackground()
 
                 Form {
-                    // ── 主题名称
-                    Section("主题名称") {
+                    Section("预览") {
+                        ThemePreviewCard(
+                            backgroundColor: backgroundColor,
+                            textColor: textColor,
+                            secondaryTextColor: derivedSecondaryTextColor,
+                            linkColor: derivedLinkColor,
+                            borderColor: derivedBorderColor,
+                            imageBrightness: imageBrightness,
+                            imageGrayscale: imageGrayscale,
+                            showsBrandTitle: false,
+                            compact: true
+                        )
+                        .listRowInsets(EdgeInsets())
+                        .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
+                    }
+
+                    Section("名称") {
                         VStack(alignment: .leading, spacing: 4) {
                             TextField("输入主题名称（最多15字）", text: $name)
                                 .font(SustainabilityTypography.body)
                                 .onChange(of: name) { _ in
-                                    if name.count > 15 { name = String(name.prefix(15)) }
+                                    if name.count > 15 {
+                                        name = String(name.prefix(15))
+                                    }
                                     nameError = nil
                                 }
-                            if let err = nameError {
-                                Text(err).font(SustainabilityTypography.caption).foregroundColor(SustainabilityPalette.danger)
+
+                            if let nameError {
+                                Text(nameError)
+                                    .font(SustainabilityTypography.caption)
+                                    .foregroundColor(SustainabilityPalette.danger)
                             }
                         }
                     }
 
-                    // ── 实时预览
-                    Section("效果预览") {
-                        ThemePreviewCard(
-                            backgroundColor: backgroundColor,
-                            textColor: textColor,
-                            secondaryTextColor: secondaryTextColor,
-                            linkColor: linkColor,
-                            borderColor: borderColor
+                    Section("图像设置") {
+                        ImageAdjustmentSliderRow(
+                            title: "亮度",
+                            value: $imageBrightness,
+                            range: 0.35...1.0,
+                            defaultValue: 0.75,
+                            displayFormatter: { value in "\(Int(value * 100))%" }
                         )
-                        .listRowInsets(EdgeInsets())
-                        .clipShape(RoundedRectangle(cornerRadius: 12))
+                        ImageAdjustmentSliderRow(
+                            title: "灰度",
+                            value: $imageGrayscale,
+                            range: 0.0...1.0,
+                            defaultValue: 0.0,
+                            displayFormatter: { value in "\(Int(value * 100))%" }
+                        )
+
+                        if existingTheme?.isBuiltin == true {
+                            Text("内置主题保存后会生成一份自定义主题。")
+                                .font(SustainabilityTypography.caption)
+                                .foregroundColor(.secondary)
+                        }
                     }
 
-                    // ── 颜色配置
-                    Section("颜色配置") {
-                        ColorPickerRow(title: "背景色", description: "网页主背景颜色", color: $backgroundColor)
-                        ColorPickerRow(title: "主要文本色", description: "标题、正文等主要文字", color: $textColor)
-                        ColorPickerRow(title: "次级文本色", description: "说明文字、时间戳等", color: $secondaryTextColor)
-                        ColorPickerRow(title: "链接颜色", description: "超链接和强调元素", color: $linkColor)
-                        ColorPickerRow(title: "边框颜色", description: "分割线、表格边框等", color: $borderColor)
+                    Section("颜色设置") {
+                        ColorPickerRow(title: "背景颜色", description: "网页主背景", color: $backgroundColor)
+                        ColorPickerRow(title: "字体颜色", description: "标题与正文", color: $textColor)
+
                         Button {
-                            applyRecommendedPalette()
+                            applyRecommendedTextColor()
                         } label: {
-                            Label("基于背景自动推荐配色", systemImage: "wand.and.stars")
+                            Label("自动推荐字体颜色", systemImage: "wand.and.stars")
                                 .font(SustainabilityTypography.bodyStrong)
                         }
+
                         Text(
                             String(
                                 format: NSLocalizedString("themeEditor.contrastLabel", comment: ""),
                                 currentContrastRatio
                             )
                         )
-                            .font(SustainabilityTypography.caption)
-                            .foregroundColor(currentContrastRatio >= 4.5 ? .secondary : SustainabilityPalette.warm)
-                        if let err = colorError {
-                            Text(err)
+                        .font(SustainabilityTypography.caption)
+                        .foregroundColor(currentContrastRatio >= 4.5 ? .secondary : SustainabilityPalette.warm)
+
+                        if let colorError {
+                            Text(colorError)
                                 .font(SustainabilityTypography.caption)
                                 .foregroundColor(SustainabilityPalette.danger)
                         }
@@ -94,48 +126,57 @@ struct ThemeEditorView: View {
                 .tint(SustainabilityPalette.primary)
                 .applyListBackgroundClear()
             }
-            .navigationTitle(isEditing ? "编辑主题" : "新建主题")
+            .navigationTitle(titleText)
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .navigationBarLeading) {
-                    Button("取消") { dismiss() }
+                    Button("取消") {
+                        dismiss()
+                    }
                 }
                 ToolbarItem(placement: .navigationBarTrailing) {
-                    Button("保存") { save() }
-                        .font(SustainabilityTypography.bodyStrong)
-                        .foregroundColor(SustainabilityPalette.primary)
+                    Button("保存") {
+                        save()
+                    }
+                    .font(SustainabilityTypography.bodyStrong)
+                    .foregroundColor(SustainabilityPalette.primary)
                 }
             }
-            .onAppear { prefill() }
-            .onChange(of: backgroundColor) { _ in colorError = nil }
-            .onChange(of: textColor) { _ in colorError = nil }
-            .onChange(of: secondaryTextColor) { _ in colorError = nil }
-            .onChange(of: linkColor) { _ in colorError = nil }
-            .onChange(of: borderColor) { _ in colorError = nil }
+            .onAppear {
+                prefill()
+            }
+            .onChange(of: backgroundColor) { _ in
+                colorError = nil
+            }
+            .onChange(of: textColor) { _ in
+                colorError = nil
+            }
         }
         .sustainabilityChrome()
     }
 
-    // MARK: - 初始化与保存
-
     private func prefill() {
-        if let theme = existingTheme {
-            name = theme.name
-            backgroundColor      = Color(hex: theme.backgroundColor)      ?? backgroundColor
-            textColor            = Color(hex: theme.textColor)            ?? textColor
-            secondaryTextColor   = Color(hex: theme.secondaryTextColor)   ?? secondaryTextColor
-            linkColor            = Color(hex: theme.linkColor)            ?? linkColor
-            borderColor          = Color(hex: theme.borderColor)          ?? borderColor
+        guard let existingTheme else {
+            applyRecommendedTextColor()
+            return
         }
+
+        name = existingTheme.isBuiltin ? existingTheme.localizedDisplayName : existingTheme.name
+        backgroundColor = Color(hex: existingTheme.backgroundColor) ?? backgroundColor
+        textColor = Color(hex: existingTheme.textColor) ?? textColor
+        imageBrightness = clampBrightness(existingTheme.imageBrightness)
+        imageGrayscale = clampGrayscale(existingTheme.imageGrayscale)
     }
 
     private func save() {
-        let trimmedName = name.trimmingCharacters(in: .whitespaces)
+        let trimmedName = name.trimmingCharacters(in: .whitespacesAndNewlines)
         colorError = nil
+
         guard !trimmedName.isEmpty else {
             nameError = NSLocalizedString("themeEditor.nameRequired", comment: "")
             return
         }
+
         guard currentContrastRatio >= 4.5 else {
             colorError = String(
                 format: NSLocalizedString("themeEditor.colorError", comment: ""),
@@ -144,20 +185,43 @@ struct ThemeEditorView: View {
             return
         }
 
+        let backgroundHex = backgroundColor.toHexString() ?? "#1e1e1e"
+        let textHex = textColor.toHexString() ?? "#e0e0e0"
+        let secondaryHex = derivedSecondaryTextColor.toHexString() ?? "#999999"
+        let linkHex = derivedLinkColor.toHexString() ?? "#4da6ff"
+        let borderHex = derivedBorderColor.toHexString() ?? "#444444"
+
+        let newThemeId: String
+        let createdAt: Date
+
+        if isEditingCustomTheme {
+            newThemeId = existingTheme!.id
+            createdAt = existingTheme!.createdAt
+        } else {
+            var generatedId = DarkTheme.generateCustomId()
+            while dataManager.themes.contains(where: { $0.id == generatedId }) {
+                generatedId = DarkTheme.generateCustomId()
+            }
+            newThemeId = generatedId
+            createdAt = Date()
+        }
+
         let newTheme = DarkTheme(
-            id: existingTheme?.id ?? DarkTheme.generateCustomId(),
+            id: newThemeId,
             name: trimmedName,
-            backgroundColor:    backgroundColor.toHexString()    ?? "#1e1e1e",
-            textColor:          textColor.toHexString()          ?? "#e0e0e0",
-            secondaryTextColor: secondaryTextColor.toHexString() ?? "#999999",
-            linkColor:          linkColor.toHexString()          ?? "#4da6ff",
-            borderColor:        borderColor.toHexString()        ?? "#444444",
+            backgroundColor: backgroundHex,
+            textColor: textHex,
+            secondaryTextColor: secondaryHex,
+            linkColor: linkHex,
+            borderColor: borderHex,
+            imageBrightness: clampBrightness(imageBrightness),
+            imageGrayscale: clampGrayscale(imageGrayscale),
             isBuiltin: false,
-            createdAt: existingTheme?.createdAt ?? Date(),
+            createdAt: createdAt,
             updatedAt: Date()
         )
 
-        if isEditing {
+        if isEditingCustomTheme {
             dataManager.updateTheme(newTheme)
         } else {
             dataManager.addCustomTheme(newTheme)
@@ -168,6 +232,67 @@ struct ThemeEditorView: View {
 
     private var currentContrastRatio: Double {
         contrastRatio(backgroundColor, textColor)
+    }
+
+    private var derivedSecondaryTextColor: Color {
+        guard let bg = rgbComponents(backgroundColor), let fg = rgbComponents(textColor) else {
+            return Color(hex: "#999999") ?? .secondary
+        }
+        return colorFromRGB(mix(fg, bg, amount: 0.35))
+    }
+
+    private var derivedLinkColor: Color {
+        guard let bg = rgbComponents(backgroundColor), let fg = rgbComponents(textColor) else {
+            return Color(hex: "#4da6ff") ?? .blue
+        }
+        let bgLum = relativeLuminance(bg)
+        let target: (Double, Double, Double) = bgLum < 0.4 ? (0.36, 0.70, 1.0) : (0.12, 0.32, 0.78)
+        return colorFromRGB(mix(fg, target, amount: 0.5))
+    }
+
+    private var derivedBorderColor: Color {
+        guard let bg = rgbComponents(backgroundColor) else {
+            return Color(hex: "#444444") ?? .gray
+        }
+        let bgLum = relativeLuminance(bg)
+        let border = bgLum < 0.4
+            ? mix(bg, (1, 1, 1), amount: 0.18)
+            : mix(bg, (0, 0, 0), amount: 0.14)
+        return colorFromRGB(border)
+    }
+
+    private func applyRecommendedTextColor() {
+        guard let bg = rgbComponents(backgroundColor) else { return }
+        let bgLum = relativeLuminance(bg)
+
+        var candidate = bgLum < 0.42 ? (0.92, 0.93, 0.96) : (0.10, 0.11, 0.14)
+        candidate = ensuredContrastText(base: candidate, background: bg, threshold: 4.5)
+        textColor = colorFromRGB(candidate)
+    }
+
+    private func ensuredContrastText(
+        base: (Double, Double, Double),
+        background: (Double, Double, Double),
+        threshold: Double
+    ) -> (Double, Double, Double) {
+        let bgLum = relativeLuminance(background)
+        let target: (Double, Double, Double) = bgLum < 0.5 ? (1, 1, 1) : (0, 0, 0)
+        var ratio = contrastRatio(colorFromRGB(background), colorFromRGB(base))
+        if ratio >= threshold {
+            return base
+        }
+
+        var factor = 0.1
+        while factor <= 1.0 {
+            let candidate = mix(base, target, amount: factor)
+            ratio = contrastRatio(colorFromRGB(background), colorFromRGB(candidate))
+            if ratio >= threshold {
+                return candidate
+            }
+            factor += 0.1
+        }
+
+        return target
     }
 
     private func contrastRatio(_ background: Color, _ foreground: Color) -> Double {
@@ -191,48 +316,13 @@ struct ThemeEditorView: View {
 
     private func relativeLuminance(_ rgb: (Double, Double, Double)) -> Double {
         func linearize(_ c: Double) -> Double {
-            return c <= 0.03928 ? c / 12.92 : pow((c + 0.055) / 1.055, 2.4)
+            c <= 0.03928 ? c / 12.92 : pow((c + 0.055) / 1.055, 2.4)
         }
+
         let r = linearize(rgb.0)
         let g = linearize(rgb.1)
         let b = linearize(rgb.2)
         return 0.2126 * r + 0.7152 * g + 0.0722 * b
-    }
-
-    private func applyRecommendedPalette() {
-        guard let bg = rgbComponents(backgroundColor) else { return }
-        let bgLum = relativeLuminance(bg)
-
-        var baseText = bgLum < 0.4 ? mix(bg, (1, 1, 1), amount: 0.86) : mix(bg, (0, 0, 0), amount: 0.84)
-        baseText = ensuredContrastText(base: baseText, background: bg, threshold: 4.5)
-        let secondary = mix(baseText, bg, amount: 0.35)
-        let link = bgLum < 0.4 ? (0.36, 0.70, 1.0) : (0.12, 0.32, 0.78)
-        let border = bgLum < 0.4 ? mix(bg, (1, 1, 1), amount: 0.18) : mix(bg, (0, 0, 0), amount: 0.14)
-
-        textColor = colorFromRGB(baseText)
-        secondaryTextColor = colorFromRGB(secondary)
-        linkColor = colorFromRGB(link)
-        borderColor = colorFromRGB(border)
-    }
-
-    private func ensuredContrastText(
-        base: (Double, Double, Double),
-        background: (Double, Double, Double),
-        threshold: Double
-    ) -> (Double, Double, Double) {
-        let bgLum = relativeLuminance(background)
-        let target: (Double, Double, Double) = bgLum < 0.5 ? (1, 1, 1) : (0, 0, 0)
-        var ratio = contrastRatio(colorFromRGB(background), colorFromRGB(base))
-        if ratio >= threshold { return base }
-
-        var factor = 0.1
-        while factor <= 1.0 {
-            let candidate = mix(base, target, amount: factor)
-            ratio = contrastRatio(colorFromRGB(background), colorFromRGB(candidate))
-            if ratio >= threshold { return candidate }
-            factor += 0.1
-        }
-        return target
     }
 
     private func mix(
@@ -251,9 +341,15 @@ struct ThemeEditorView: View {
     private func colorFromRGB(_ rgb: (Double, Double, Double)) -> Color {
         Color(.sRGB, red: rgb.0, green: rgb.1, blue: rgb.2, opacity: 1)
     }
-}
 
-// MARK: - 颜色选择器行
+    private func clampBrightness(_ value: Double) -> Double {
+        min(max(value, 0.35), 1.0)
+    }
+
+    private func clampGrayscale(_ value: Double) -> Double {
+        min(max(value, 0.0), 1.0)
+    }
+}
 
 struct ColorPickerRow: View {
     let title: String
@@ -263,8 +359,11 @@ struct ColorPickerRow: View {
     var body: some View {
         HStack {
             VStack(alignment: .leading, spacing: 2) {
-                Text(LocalizedStringKey(title)).font(SustainabilityTypography.body)
-                Text(LocalizedStringKey(description)).font(SustainabilityTypography.caption).foregroundColor(.secondary)
+                Text(LocalizedStringKey(title))
+                    .font(SustainabilityTypography.body)
+                Text(LocalizedStringKey(description))
+                    .font(SustainabilityTypography.caption)
+                    .foregroundColor(.secondary)
             }
             Spacer()
             ColorPicker("", selection: $color, supportsOpacity: false)
@@ -274,7 +373,39 @@ struct ColorPickerRow: View {
     }
 }
 
-// MARK: - 主题预览卡片
+private struct ImageAdjustmentSliderRow: View {
+    let title: String
+    @Binding var value: Double
+    let range: ClosedRange<Double>
+    let defaultValue: Double
+    let displayFormatter: (Double) -> String
+
+    var body: some View {
+        HStack(spacing: 10) {
+            Text(LocalizedStringKey(title))
+                .font(SustainabilityTypography.bodyStrong)
+                .frame(width: 42, alignment: .leading)
+
+            Slider(value: $value, in: range)
+
+            Text(displayFormatter(value))
+                .font(SustainabilityTypography.caption)
+                .foregroundColor(.secondary)
+                .frame(width: 46, alignment: .trailing)
+
+            Button {
+                value = defaultValue
+            } label: {
+                Image(systemName: "arrow.uturn.backward.circle.fill")
+                    .font(.system(size: 18, weight: .regular))
+                    .foregroundColor(.secondary.opacity(0.75))
+            }
+            .buttonStyle(.plain)
+            .accessibilityLabel("重置\(title)")
+        }
+        .sustainabilityInteractiveRow()
+    }
+}
 
 struct ThemePreviewCard: View {
     let backgroundColor: Color
@@ -282,11 +413,36 @@ struct ThemePreviewCard: View {
     let secondaryTextColor: Color
     let linkColor: Color
     let borderColor: Color
+    let imageBrightness: Double
+    let imageGrayscale: Double
+    let showsBrandTitle: Bool
+    let compact: Bool
+
+    init(
+        backgroundColor: Color,
+        textColor: Color,
+        secondaryTextColor: Color,
+        linkColor: Color,
+        borderColor: Color,
+        imageBrightness: Double = 0.75,
+        imageGrayscale: Double = 0.0,
+        showsBrandTitle: Bool = true,
+        compact: Bool = false
+    ) {
+        self.backgroundColor = backgroundColor
+        self.textColor = textColor
+        self.secondaryTextColor = secondaryTextColor
+        self.linkColor = linkColor
+        self.borderColor = borderColor
+        self.imageBrightness = min(max(imageBrightness, 0.35), 1.0)
+        self.imageGrayscale = min(max(imageGrayscale, 0.0), 1.0)
+        self.showsBrandTitle = showsBrandTitle
+        self.compact = compact
+    }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
-            // 模拟网页标题栏
-            HStack {
+            HStack(spacing: 8) {
                 Image(systemName: "safari.fill")
                     .foregroundColor(secondaryTextColor)
                 Text(NSLocalizedString("themeEditor.preview.title", comment: ""))
@@ -294,42 +450,113 @@ struct ThemePreviewCard: View {
                     .foregroundColor(secondaryTextColor)
                 Spacer()
             }
-            .padding(.horizontal, 12)
-            .padding(.vertical, 8)
-            .background(backgroundColor.opacity(0.7))
+            .padding(.horizontal, compact ? 12 : 14)
+            .padding(.vertical, compact ? 8 : 10)
+            .background(backgroundColor.opacity(0.72))
 
             Divider().background(borderColor)
 
-            // 模拟网页内容
-            VStack(alignment: .leading, spacing: 8) {
-                Text("网页标题示例")
-                    .font(SustainabilityTypography.bodyStrong)
-                    .foregroundColor(textColor)
+            HStack(alignment: .top, spacing: compact ? 8 : 12) {
+                VStack(alignment: .leading, spacing: compact ? 6 : 8) {
+                    if showsBrandTitle {
+                        Text("NoirFeed")
+                            .font(.system(size: 18, weight: .semibold, design: .rounded))
+                            .foregroundColor(secondaryTextColor)
+                    }
 
-                Text("这是一段示例正文内容，展示深色模式下文字的可读性和舒适度。")
-                    .font(SustainabilityTypography.caption)
-                    .foregroundColor(textColor)
-                    .lineSpacing(2)
+                    Text("新主题正在制作中")
+                        .font(SustainabilityTypography.bodyStrong)
+                        .foregroundColor(textColor)
 
-                HStack {
-                    Text("次级说明文字")
+                    Text("预览会实时显示背景、字体和图像参数。")
                         .font(SustainabilityTypography.caption)
-                        .foregroundColor(secondaryTextColor)
-                    Spacer()
-                    Text("阅读更多")
-                        .font(SustainabilityTypography.caption)
-                        .foregroundColor(linkColor)
+                        .foregroundColor(textColor)
+                        .lineSpacing(compact ? 1 : 2)
+                        .lineLimit(compact ? 2 : nil)
+
+                    if compact {
+                        Text("图像滤镜已应用")
+                            .font(SustainabilityTypography.caption)
+                            .foregroundColor(secondaryTextColor)
+                    } else {
+                        HStack(spacing: 8) {
+                            Text("阅读更多")
+                                .font(SustainabilityTypography.caption)
+                                .foregroundColor(linkColor)
+                            Circle()
+                                .fill(borderColor.opacity(0.75))
+                                .frame(width: 5, height: 5)
+                            Text("图像滤镜已应用")
+                                .font(SustainabilityTypography.caption)
+                                .foregroundColor(secondaryTextColor)
+                        }
+                    }
                 }
 
-                HStack(spacing: 6) {
-                    RoundedRectangle(cornerRadius: 4)
-                        .fill(borderColor.opacity(0.5))
-                        .frame(height: 1)
-                }
+                Spacer(minLength: compact ? 4 : 8)
+
+                PreviewMediaTile(
+                    brightness: imageBrightness,
+                    grayscale: imageGrayscale,
+                    size: compact ? 78 : 96
+                )
             }
-            .padding(12)
+            .padding(compact ? 10 : 14)
         }
         .background(backgroundColor)
+        .overlay(
+            RoundedRectangle(cornerRadius: 14, style: .continuous)
+                .stroke(borderColor.opacity(0.45), lineWidth: 1)
+        )
+    }
+}
+
+private struct PreviewMediaTile: View {
+    let brightness: Double
+    let grayscale: Double
+    let size: CGFloat
+
+    init(brightness: Double, grayscale: Double, size: CGFloat = 96) {
+        self.brightness = brightness
+        self.grayscale = grayscale
+        self.size = size
+    }
+
+    var body: some View {
+        ZStack {
+            RoundedRectangle(cornerRadius: size * 0.15, style: .continuous)
+                .fill(
+                    LinearGradient(
+                        colors: [
+                            Color(hex: "#3C8D2F") ?? .green,
+                            Color(hex: "#BFC97A") ?? .yellow,
+                            Color(hex: "#5C8CD1") ?? .blue
+                        ],
+                        startPoint: .topLeading,
+                        endPoint: .bottomTrailing
+                    )
+                )
+
+            Circle()
+                .fill(Color(hex: "#FDBA16") ?? .yellow)
+                .frame(width: size * 0.46, height: size * 0.46)
+                .overlay(
+                    Circle()
+                        .stroke(Color(hex: "#78350F") ?? .brown, lineWidth: max(4, size * 0.06))
+                )
+
+            Circle()
+                .fill(Color(hex: "#92400E") ?? .brown)
+                .frame(width: size * 0.15, height: size * 0.15)
+        }
+        .frame(width: size, height: size)
+        .clipShape(RoundedRectangle(cornerRadius: size * 0.15, style: .continuous))
+        .grayscale(min(max(grayscale, 0.0), 1.0))
+        .brightness((min(max(brightness, 0.35), 1.0) - 1.0) * 0.45)
+        .overlay(
+            RoundedRectangle(cornerRadius: size * 0.15, style: .continuous)
+                .stroke(Color.white.opacity(0.18), lineWidth: 1)
+        )
     }
 }
 

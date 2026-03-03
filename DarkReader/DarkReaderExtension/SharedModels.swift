@@ -105,6 +105,8 @@ struct DarkTheme: Codable, Identifiable, Equatable {
     var secondaryTextColor: String
     var linkColor: String
     var borderColor: String
+    var imageBrightness: Double
+    var imageGrayscale: Double
     let isBuiltin: Bool
     var createdAt: Date
     var updatedAt: Date
@@ -117,6 +119,8 @@ struct DarkTheme: Codable, Identifiable, Equatable {
         case secondaryTextColor
         case linkColor
         case borderColor
+        case imageBrightness
+        case imageGrayscale
         case isBuiltin
         case createdAt
         case updatedAt
@@ -130,6 +134,8 @@ struct DarkTheme: Codable, Identifiable, Equatable {
         secondaryTextColor: String,
         linkColor: String,
         borderColor: String,
+        imageBrightness: Double = 0.75,
+        imageGrayscale: Double = 0.0,
         isBuiltin: Bool,
         createdAt: Date,
         updatedAt: Date = Date()
@@ -141,6 +147,8 @@ struct DarkTheme: Codable, Identifiable, Equatable {
         self.secondaryTextColor = secondaryTextColor
         self.linkColor = linkColor
         self.borderColor = borderColor
+        self.imageBrightness = min(max(imageBrightness, 0.35), 1.0)
+        self.imageGrayscale = min(max(imageGrayscale, 0.0), 1.0)
         self.isBuiltin = isBuiltin
         self.createdAt = createdAt
         self.updatedAt = updatedAt
@@ -155,6 +163,14 @@ struct DarkTheme: Codable, Identifiable, Equatable {
         self.secondaryTextColor = try container.decode(String.self, forKey: .secondaryTextColor)
         self.linkColor = try container.decode(String.self, forKey: .linkColor)
         self.borderColor = try container.decode(String.self, forKey: .borderColor)
+        self.imageBrightness = min(
+            max(try container.decodeIfPresent(Double.self, forKey: .imageBrightness) ?? 0.75, 0.35),
+            1.0
+        )
+        self.imageGrayscale = min(
+            max(try container.decodeIfPresent(Double.self, forKey: .imageGrayscale) ?? 0.0, 0.0),
+            1.0
+        )
         self.isBuiltin = try container.decode(Bool.self, forKey: .isBuiltin)
         self.createdAt = try container.decodeIfPresent(Date.self, forKey: .createdAt) ?? Date(timeIntervalSince1970: 0)
         self.updatedAt = try container.decodeIfPresent(Date.self, forKey: .updatedAt) ?? self.createdAt
@@ -169,6 +185,8 @@ struct DarkTheme: Codable, Identifiable, Equatable {
         try container.encode(secondaryTextColor, forKey: .secondaryTextColor)
         try container.encode(linkColor, forKey: .linkColor)
         try container.encode(borderColor, forKey: .borderColor)
+        try container.encode(imageBrightness, forKey: .imageBrightness)
+        try container.encode(imageGrayscale, forKey: .imageGrayscale)
         try container.encode(isBuiltin, forKey: .isBuiltin)
         try container.encode(createdAt, forKey: .createdAt)
         try container.encode(updatedAt, forKey: .updatedAt)

@@ -73,6 +73,8 @@ async function getConfigForDomain(domain, skipCache = false) {
       secondaryTextColor: '#999999',
       linkColor: '#4da6ff',
       borderColor: '#444444',
+      imageBrightness: 0.75,
+      imageGrayscale: 0,
       dimImages: true
     }
   };
