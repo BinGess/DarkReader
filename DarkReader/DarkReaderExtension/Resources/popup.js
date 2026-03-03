@@ -183,6 +183,17 @@ async function initialize() {
     allThemes = defaultThemes();
   }
 
+  // ★ 关键修复：打开 popup 时立即将当前主题推送给网页的 content.js
+  //   解决"App 改完主题 → 打开 popup 看到名称已更新 → 但网页仍是旧样式"的问题
+  //   只要打开 popup，哪怕不手动切换，网页也会立即同步到最新主题
+  if (tab?.id) {
+    const theme = allThemes.find(th => th.id === currentThemeId && th.backgroundColor);
+    if (theme) {
+      // 不 await：主动推送，失败也不影响 popup 正常显示
+      browser.tabs.sendMessage(tab.id, { action: 'applyTheme', theme }).catch(() => {});
+    }
+  }
+
   renderModeControl();
   renderThemeSelect();
   renderPauseState();

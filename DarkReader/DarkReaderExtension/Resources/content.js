@@ -42,13 +42,15 @@
   // 运行时状态
   // ============================================================
 
-  let currentTheme = null;      // 当前生效的主题配置
-  let currentConfig = null;     // 全局配置（mode、siteRules 等）
-  let isActive = false;         // 深色模式是否处于激活状态
-  let isPaused = false;         // 用户手动暂停（一键暂停功能）
-  let mutationObserver = null;  // DOM 变化监听器
-  let debounceTimer = null;     // 防抖计时器
-  let originalPushState = null; // 保存原始 history.pushState
+  let currentTheme = null;       // 当前生效的主题配置
+  let currentConfig = null;      // 全局配置（mode、siteRules 等）
+  let isActive = false;          // 深色模式是否处于激活状态
+  let isPaused = false;          // 用户手动暂停（一键暂停功能）
+  let mutationObserver = null;   // DOM 变化监听器
+  let debounceTimer = null;      // 防抖计时器
+  let originalPushState = null;  // 保存原始 history.pushState
+  let isRefreshingTheme = false; // 防止 refreshThemeFromApp 并发执行
+  let themeRefreshTimer = null;  // 定时轮询主题变化的 timer handle
 
   // ============================================================
   // 工具函数：颜色解析与转换
@@ -654,36 +656,81 @@ svg {
   // ============================================================
 
   /**
-   * 监听页面可见性变化。
-   * 用户在主 App 中切换主题后返回 Safari 时，visibilitychange 会触发，
-   * 此时强制绕过缓存从 App Groups 重新读取最新配置并应用。
+   * 启动主题同步机制，双重保险：
+   *
+   * 方案A - visibilitychange：
+   *   页面重新可见时立即触发一次检查。
+   *   但在 iOS 上，从 native App 切回 Safari 时此事件并不总能触发，
+   *   且 Safari MV3 Service Worker 可能未就绪，所以单独依赖它不可靠。
+   *
+   * 方案B - setInterval 定时轮询（主要方案）：
+   *   每 3 秒检查一次主题是否有变化。
+   *   只要页面可见且深色模式激活，就持续轮询。
+   *   轮询结果依赖 background.js 的 native 调用（800ms 缓存 TTL）。
+   *   这是最可靠的方式，不依赖任何特定事件的触发时机。
    */
   function setupVisibilitySync() {
+    // 方案A：visibilitychange 时立即尝试 + 管理轮询状态
     document.addEventListener('visibilitychange', () => {
       if (document.visibilityState === 'visible') {
-        refreshThemeFromApp();
+        refreshThemeFromApp();   // 立即尝试一次
+        startThemePolling();     // 确保轮询处于运行状态
+      } else {
+        stopThemePolling();      // 页面隐藏时停止轮询，节省资源
       }
     });
+
+    // 补充：pageshow 在部分 iOS 场景下比 visibilitychange 更可靠
+    window.addEventListener('pageshow', () => {
+      if (isActive && !isPaused) {
+        refreshThemeFromApp();
+        startThemePolling();
+      }
+    });
+
+    // 方案B：页面加载后即开始定时轮询（页面已是可见状态）
+    startThemePolling();
+  }
+
+  /** 启动定时轮询（3秒/次），已在运行则先停止再重启避免重复 */
+  function startThemePolling() {
+    stopThemePolling();
+    themeRefreshTimer = setInterval(() => {
+      if (document.visibilityState === 'visible' && isActive && !isPaused) {
+        refreshThemeFromApp();
+      }
+    }, 3000);
+  }
+
+  /** 停止定时轮询 */
+  function stopThemePolling() {
+    if (themeRefreshTimer !== null) {
+      clearInterval(themeRefreshTimer);
+      themeRefreshTimer = null;
+    }
   }
 
   /**
-   * 强制从 App Groups 拉取最新主题并与当前生效主题对比。
-   * 若主题发生变化（背景色或文字色不同），立即重新注入深色样式。
-   * 使用 fresh:true 确保 background.js 跳过缓存、直接查询 native 端。
+   * 向 background.js 请求最新配置，若主题发生变化则立即应用。
+   *
+   * - 使用防重入标志（isRefreshingTheme）避免并发调用
+   * - fresh:true 跳过 background.js 缓存，直读 App Groups
+   * - 3 秒超时：足够 Service Worker 从休眠唤醒并完成 native 调用
+   * - 失败时静默忽略，由下一次轮询或事件触发重试
    */
   async function refreshThemeFromApp() {
-    // 未激活深色模式时无需刷新（浅色页面没有样式要更新）
-    if (!isActive || isPaused) return;
+    if (!isActive || isPaused || isRefreshingTheme) return;
+    isRefreshingTheme = true;
 
     try {
       const result = await Promise.race([
         browser.runtime.sendMessage({
           action: 'getConfig',
           domain: currentDomain(),
-          fresh: true   // 强制跳过 background.js 缓存
+          fresh: true  // 强制跳过 background.js 缓存
         }),
-        // 600ms 超时：避免 Safari 扩展进程唤醒延迟导致长时间阻塞
-        new Promise((_, reject) => setTimeout(() => reject(new Error('timeout')), 600))
+        // 3 秒超时：Service Worker 从完全挂起到就绪通常在此范围内
+        new Promise((_, reject) => setTimeout(() => reject(new Error('timeout')), 3000))
       ]);
 
       if (!result?.theme || !isActive) return;
@@ -700,8 +747,11 @@ svg {
         currentTheme = newTheme;
         injectFullStyle(currentTheme);
       }
+
     } catch (_) {
-      // 超时或通信失败时静默忽略，不影响当前浏览
+      // 超时或通信失败时静默忽略（下次轮询或事件触发时自动重试）
+    } finally {
+      isRefreshingTheme = false;
     }
   }
 
