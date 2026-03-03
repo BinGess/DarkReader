@@ -650,6 +650,62 @@ svg {
   }
 
   // ============================================================
+  // 主题实时同步（用户从主 App 切回 Safari 时自动更新）
+  // ============================================================
+
+  /**
+   * 监听页面可见性变化。
+   * 用户在主 App 中切换主题后返回 Safari 时，visibilitychange 会触发，
+   * 此时强制绕过缓存从 App Groups 重新读取最新配置并应用。
+   */
+  function setupVisibilitySync() {
+    document.addEventListener('visibilitychange', () => {
+      if (document.visibilityState === 'visible') {
+        refreshThemeFromApp();
+      }
+    });
+  }
+
+  /**
+   * 强制从 App Groups 拉取最新主题并与当前生效主题对比。
+   * 若主题发生变化（背景色或文字色不同），立即重新注入深色样式。
+   * 使用 fresh:true 确保 background.js 跳过缓存、直接查询 native 端。
+   */
+  async function refreshThemeFromApp() {
+    // 未激活深色模式时无需刷新（浅色页面没有样式要更新）
+    if (!isActive || isPaused) return;
+
+    try {
+      const result = await Promise.race([
+        browser.runtime.sendMessage({
+          action: 'getConfig',
+          domain: currentDomain(),
+          fresh: true   // 强制跳过 background.js 缓存
+        }),
+        // 600ms 超时：避免 Safari 扩展进程唤醒延迟导致长时间阻塞
+        new Promise((_, reject) => setTimeout(() => reject(new Error('timeout')), 600))
+      ]);
+
+      if (!result?.theme || !isActive) return;
+
+      const newTheme = result.theme;
+
+      // 用背景色 + 文字色双重比对，判断主题是否真正发生变化
+      // 避免无变化时重复注入（会导致轻微样式闪烁）
+      const themeChanged =
+        newTheme.backgroundColor !== currentTheme?.backgroundColor ||
+        newTheme.textColor !== currentTheme?.textColor;
+
+      if (themeChanged) {
+        currentTheme = newTheme;
+        injectFullStyle(currentTheme);
+      }
+    } catch (_) {
+      // 超时或通信失败时静默忽略，不影响当前浏览
+    }
+  }
+
+  // ============================================================
   // 消息监听（接收来自 popup.js 的实时指令）
   // ============================================================
 
@@ -737,6 +793,10 @@ svg {
 
       // 监听系统颜色模式变化
       setupColorSchemeListener();
+
+      // ★ 监听页面可见性：从主 App 切回 Safari 时自动同步最新主题
+      //   解决"App 改完主题→回到浏览器→样式未更新"的问题
+      setupVisibilitySync();
 
     } catch (e) {
       // 错误降级：保留防闪白样式，记录日志
