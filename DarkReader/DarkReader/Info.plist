@@ -1,0 +1,83 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>CFBundleDisplayName</key>
+	<string>AutoDark</string>
+	<key>CFBundleExecutable</key>
+	<string>$(EXECUTABLE_NAME)</string>
+	<key>CFBundleIdentifier</key>
+	<string>$(PRODUCT_BUNDLE_IDENTIFIER)</string>
+	<key>CFBundleInfoDictionaryVersion</key>
+	<string>6.0</string>
+	<key>CFBundleName</key>
+	<string>$(PRODUCT_NAME)</string>
+	<key>CFBundlePackageType</key>
+	<string>$(PRODUCT_BUNDLE_PACKAGE_TYPE)</string>
+	<key>CFBundleShortVersionString</key>
+	<string>1.0</string>
+	<key>CFBundleVersion</key>
+	<string>1</string>
+	<key>CFBundleURLTypes</key>
+	<array>
+		<dict>
+			<key>CFBundleTypeRole</key>
+			<string>Editor</string>
+			<key>CFBundleURLName</key>
+			<string>com.timmy.darkreader</string>
+			<key>CFBundleURLSchemes</key>
+			<array>
+				<string>darkreader</string>
+			</array>
+		</dict>
+	</array>
+	<!-- 支持 iPad（必须，否则无法在 iPad 上显示全尺寸界面） -->
+	<key>UIDeviceFamily</key>
+	<array>
+		<integer>1</integer>
+		<integer>2</integer>
+	</array>
+	<!-- 支持的方向 -->
+	<key>UISupportedInterfaceOrientations</key>
+	<array>
+		<string>UIInterfaceOrientationPortrait</string>
+		<string>UIInterfaceOrientationPortraitUpsideDown</string>
+		<string>UIInterfaceOrientationLandscapeLeft</string>
+		<string>UIInterfaceOrientationLandscapeRight</string>
+	</array>
+	<key>UISupportedInterfaceOrientations~ipad</key>
+	<array>
+		<string>UIInterfaceOrientationPortrait</string>
+		<string>UIInterfaceOrientationPortraitUpsideDown</string>
+		<string>UIInterfaceOrientationLandscapeLeft</string>
+		<string>UIInterfaceOrientationLandscapeRight</string>
+	</array>
+	<!--
+		⚠️ 必须声明启动屏，否则 iOS 会以"信箱模式（Letterboxing）"加黑边。
+		使用 UILaunchScreen 字典（Xcode 13+ 推荐方式），不需要 LaunchScreen.storyboard 文件。
+		空字典即告知系统"本 App 已适配所有屏幕尺寸，使用全屏"。
+	-->
+	<key>UILaunchScreen</key>
+	<dict>
+		<!--
+			空字典：告知 iOS"本 App 已适配所有屏幕尺寸"，消除黑边。
+			启动屏颜色跟随系统 Light/Dark Mode 自动切换（白/黑）。
+			如需自定义颜色，添加 UIColorName 并在 Assets.xcassets 创建对应颜色资源。
+		-->
+	</dict>
+	<!-- Scene 配置（SwiftUI App Lifecycle） -->
+	<key>UIApplicationSceneManifest</key>
+	<dict>
+		<key>UIApplicationSupportsMultipleScenes</key>
+		<false/>
+		<key>UISceneConfigurations</key>
+		<dict/>
+	</dict>
+	<!-- 隐私说明（Safari 扩展需要访问网页权限，苹果审核需要） -->
+	<key>NSPrivacyManifest</key>
+	<string>PrivacyInfo.xcprivacy</string>
+	<!-- 最低系统版本（在 Xcode 的 Deployment Target 中设置，这里仅作参考） -->
+	<!-- iOS 15.0+, iPadOS 15.0+ -->
+	<!-- Mac Catalyst 12.0+ -->
+</dict>
+</plist>

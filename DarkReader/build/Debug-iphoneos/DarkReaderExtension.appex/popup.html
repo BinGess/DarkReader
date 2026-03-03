@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>DarkReader</title>
+  <link rel="stylesheet" href="popup.css">
+</head>
+<body>
+  <main class="popup-shell">
+    <header class="hero-card" aria-label="DarkReader payment gateway panel">
+      <div class="hero-top">
+        <p class="hero-kicker">DARKREADER CONSOLE</p>
+        <button id="pauseBtn" class="icon-btn" title="暂停或恢复当前站点" aria-label="暂停或恢复当前站点" aria-pressed="false">
+          <svg class="pause-icon pause-icon-pause" viewBox="0 0 24 24" aria-hidden="true">
+            <path d="M8 5h3v14H8zM13 5h3v14h-3z"></path>
+          </svg>
+          <svg class="pause-icon pause-icon-play" viewBox="0 0 24 24" aria-hidden="true">
+            <path d="M8 5v14l11-7z"></path>
+          </svg>
+        </button>
+      </div>
+
+      <h1 class="hero-title">DarkReader 控制台</h1>
+      <p class="hero-subtitle">清爽布局，低干扰策略</p>
+
+      <div class="domain-row">
+        <svg class="domain-icon" viewBox="0 0 24 24" aria-hidden="true">
+          <path d="M12 2a10 10 0 100 20 10 10 0 000-20zm6.9 9h-3.1a15.7 15.7 0 00-1.3-5.2A8.05 8.05 0 0118.9 11zM12 4.1c.9 1.3 1.8 3.7 2.1 6.9H9.9c.3-3.2 1.2-5.6 2.1-6.9zM4 12c0-.3 0-.7.1-1h3.1c-.1.7-.2 1.3-.2 2s.1 1.3.2 2H4.1c-.1-.3-.1-.7-.1-1zm1.1-1a8.04 8.04 0 014.4-5.2A15.7 15.7 0 008.2 11H5.1zm4.4 7.2A8.04 8.04 0 015.1 13h3.1c.2 2 .7 3.8 1.3 5.2zm2.5 1.7c-.9-1.3-1.8-3.7-2.1-6.9h4.2c-.3 3.2-1.2 5.6-2.1 6.9zm2.5-1.7c.6-1.4 1.1-3.2 1.3-5.2h3.1a8.04 8.04 0 01-4.4 5.2zm1.5-7.2h-4v-2h4v2z"></path>
+        </svg>
+        <span id="domainLabel" class="domain-text">加载中...</span>
+      </div>
+    </header>
+
+    <section id="pauseBanner" class="pause-banner hidden" role="status" aria-live="polite">
+      <span>当前站点已暂停深色策略。</span>
+      <button id="resumeBtn" class="text-btn">恢复</button>
+    </section>
+
+    <section class="panel">
+      <label class="control-label">站点模式</label>
+      <div class="segmented-control" id="modeControl">
+        <button class="seg-btn" data-value="follow">跟随</button>
+        <button class="seg-btn" data-value="on">开启</button>
+        <button class="seg-btn" data-value="off">关闭</button>
+      </div>
+    </section>
+
+    <section class="panel">
+      <label class="control-label" for="themeSelect">站点主题</label>
+      <div class="select-wrap">
+        <select id="themeSelect" class="theme-select">
+          <option value="">跟随默认</option>
+        </select>
+      </div>
+    </section>
+
+    <section class="footer-actions">
+      <button id="openAppBtn" class="footer-btn footer-btn-primary">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3a2 2 0 012 2v1h3a2 2 0 012 2v9a2 2 0 01-2 2h-3v1a2 2 0 11-4 0v-1H7a2 2 0 01-2-2V8a2 2 0 012-2h3V5a2 2 0 012-2zm-1 4H7v9h10V7h-4v2h-2V7z"></path></svg>
+        打开设置
+      </button>
+      <button id="reportBtn" class="footer-btn">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M10 3h4l1 2h4a2 2 0 012 2v10a2 2 0 01-2 2H5a2 2 0 01-2-2V7a2 2 0 012-2h4l1-2zm2 15a1.5 1.5 0 100-3 1.5 1.5 0 000 3zm0-10a1 1 0 00-1 1v4a1 1 0 102 0V9a1 1 0 00-1-1z"></path></svg>
+        报告问题
+      </button>
+    </section>
+
+    <section id="feedbackPanel" class="panel hidden">
+      <div class="feedback-header">
+        <h2>反馈排版问题</h2>
+        <button id="closeFeedback" class="icon-close" aria-label="关闭反馈面板">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M18.3 5.7L12 12l6.3 6.3-1.4 1.4L10.6 13.4 4.3 19.7 2.9 18.3 9.2 12 2.9 5.7 4.3 4.3l6.3 6.3 6.3-6.3z"></path></svg>
+        </button>
+      </div>
+      <textarea id="feedbackText" class="feedback-input" placeholder="请描述遇到的问题（如文字模糊、排版错乱等）..." maxlength="200" rows="4"></textarea>
+      <button id="submitFeedback" class="submit-btn">提交反馈</button>
+    </section>
+  </main>
+
+  <script src="popup.js"></script>
+</body>
+</html>

@@ -1,0 +1,53 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<!-- DarkReader 隐私清单（iOS 17+ App Store 合规要求） -->
+	<!-- 声明：本应用不追踪用户、不收集任何数据 -->
+
+	<!-- 是否追踪用户 -->
+	<key>NSPrivacyTracking</key>
+	<false/>
+
+	<!-- 追踪相关域名（无） -->
+	<key>NSPrivacyTrackingDomains</key>
+	<array/>
+
+	<!-- 收集的数据类型（无） -->
+	<key>NSPrivacyCollectedDataTypes</key>
+	<array/>
+
+	<!-- 访问的系统 API 类型 -->
+	<key>NSPrivacyAccessedAPITypes</key>
+	<array>
+		<!--
+			UserDefaults（App Groups）
+			用途：在宿主 App 与 Safari 扩展之间共享深色模式配置、主题和站点规则。
+			数据不会离开设备（除非用户主动开启 iCloud 同步）。
+		-->
+		<dict>
+			<key>NSPrivacyAccessedAPIType</key>
+			<string>NSPrivacyAccessedAPICategoryUserDefaults</string>
+			<key>NSPrivacyAccessedAPITypeReasons</key>
+			<array>
+				<!-- CA92.1: 通过 App Groups 在同一开发者团队的 App 扩展间共享数据 -->
+				<string>CA92.1</string>
+			</array>
+		</dict>
+
+		<!--
+			文件时间戳
+			用途：创建自定义主题时记录 createdAt 时间戳（存储在 UserDefaults 中）。
+		-->
+		<dict>
+			<key>NSPrivacyAccessedAPIType</key>
+			<string>NSPrivacyAccessedAPICategoryFileTimestamp</string>
+			<key>NSPrivacyAccessedAPITypeReasons</key>
+			<array>
+				<!-- DDA9.1: 应用本身记录的文件时间戳 -->
+				<string>DDA9.1</string>
+			</array>
+		</dict>
+	</array>
+</dict>
+</plist>

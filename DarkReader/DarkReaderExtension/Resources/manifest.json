@@ -1,0 +1,53 @@
+{
+  "manifest_version": 3,
+  "name": "夜览",
+  "version": "1.0.0",
+  "description": "智能 Safari 深色模式扩展 - 护眼浏览更安心",
+
+  "permissions": [
+    "activeTab",
+    "scripting",
+    "tabs",
+    "nativeMessaging"
+  ],
+
+  "host_permissions": [
+    "<all_urls>"
+  ],
+
+  "background": {
+    "service_worker": "background.js",
+    "type": "module"
+  },
+
+  "content_scripts": [
+    {
+      "js": ["content.js"],
+      "matches": ["<all_urls>"],
+      "run_at": "document_start",
+      "exclude_matches": [
+        "*://localhost/*",
+        "safari-extension://*"
+      ],
+      "all_frames": true
+    }
+  ],
+
+  "action": {
+    "default_popup": "popup.html",
+    "default_title": "夜览",
+    "default_icon": {
+      "16":  "icons/icon16.png",
+      "32":  "icons/icon32.png",
+      "48":  "icons/icon48.png",
+      "128": "icons/icon128.png"
+    }
+  },
+
+  "icons": {
+    "16":  "icons/icon16.png",
+    "32":  "icons/icon32.png",
+    "48":  "icons/icon48.png",
+    "128": "icons/icon128.png"
+  }
+}

@@ -1,0 +1,29 @@
+{
+  "" : {
+    "diagnostics" : "/Users/bytedance/Documents/Code/toolforsafari/DarkReader/DarkReader/build/DarkReader.build/Debug-iphoneos/DarkReaderExtension.build/Objects-normal/arm64/DarkReaderExtension-primary.dia",
+    "emit-module-dependencies" : "/Users/bytedance/Documents/Code/toolforsafari/DarkReader/DarkReader/build/DarkReader.build/Debug-iphoneos/DarkReaderExtension.build/Objects-normal/arm64/DarkReaderExtension-primary-emit-module.d",
+    "emit-module-diagnostics" : "/Users/bytedance/Documents/Code/toolforsafari/DarkReader/DarkReader/build/DarkReader.build/Debug-iphoneos/DarkReaderExtension.build/Objects-normal/arm64/DarkReaderExtension-primary-emit-module.dia",
+    "pch" : "/Users/bytedance/Documents/Code/toolforsafari/DarkReader/DarkReader/build/DarkReader.build/Debug-iphoneos/DarkReaderExtension.build/Objects-normal/arm64/DarkReaderExtension-primary-Bridging-header.pch",
+    "swift-dependencies" : "/Users/bytedance/Documents/Code/toolforsafari/DarkReader/DarkReader/build/DarkReader.build/Debug-iphoneos/DarkReaderExtension.build/Objects-normal/arm64/DarkReaderExtension-primary.swiftdeps"
+  },
+  "/Users/bytedance/Documents/Code/toolforsafari/DarkReader/DarkReader/DarkReaderExtension/SafariWebExtensionHandler.swift" : {
+    "const-values" : "/Users/bytedance/Documents/Code/toolforsafari/DarkReader/DarkReader/build/DarkReader.build/Debug-iphoneos/DarkReaderExtension.build/Objects-normal/arm64/SafariWebExtensionHandler.swiftconstvalues",
+    "dependencies" : "/Users/bytedance/Documents/Code/toolforsafari/DarkReader/DarkReader/build/DarkReader.build/Debug-iphoneos/DarkReaderExtension.build/Objects-normal/arm64/SafariWebExtensionHandler.d",
+    "diagnostics" : "/Users/bytedance/Documents/Code/toolforsafari/DarkReader/DarkReader/build/DarkReader.build/Debug-iphoneos/DarkReaderExtension.build/Objects-normal/arm64/SafariWebExtensionHandler.dia",
+    "index-unit-output-path" : "/DarkReader.build/Debug-iphoneos/DarkReaderExtension.build/Objects-normal/arm64/SafariWebExtensionHandler.o",
+    "llvm-bc" : "/Users/bytedance/Documents/Code/toolforsafari/DarkReader/DarkReader/build/DarkReader.build/Debug-iphoneos/DarkReaderExtension.build/Objects-normal/arm64/SafariWebExtensionHandler.bc",
+    "object" : "/Users/bytedance/Documents/Code/toolforsafari/DarkReader/DarkReader/build/DarkReader.build/Debug-iphoneos/DarkReaderExtension.build/Objects-normal/arm64/SafariWebExtensionHandler.o",
+    "swift-dependencies" : "/Users/bytedance/Documents/Code/toolforsafari/DarkReader/DarkReader/build/DarkReader.build/Debug-iphoneos/DarkReaderExtension.build/Objects-normal/arm64/SafariWebExtensionHandler.swiftdeps",
+    "swiftmodule" : "/Users/bytedance/Documents/Code/toolforsafari/DarkReader/DarkReader/build/DarkReader.build/Debug-iphoneos/DarkReaderExtension.build/Objects-normal/arm64/SafariWebExtensionHandler~partial.swiftmodule"
+  },
+  "/Users/bytedance/Documents/Code/toolforsafari/DarkReader/DarkReader/DarkReaderExtension/SharedModels.swift" : {
+    "const-values" : "/Users/bytedance/Documents/Code/toolforsafari/DarkReader/DarkReader/build/DarkReader.build/Debug-iphoneos/DarkReaderExtension.build/Objects-normal/arm64/SharedModels.swiftconstvalues",
+    "dependencies" : "/Users/bytedance/Documents/Code/toolforsafari/DarkReader/DarkReader/build/DarkReader.build/Debug-iphoneos/DarkReaderExtension.build/Objects-normal/arm64/SharedModels.d",
+    "diagnostics" : "/Users/bytedance/Documents/Code/toolforsafari/DarkReader/DarkReader/build/DarkReader.build/Debug-iphoneos/DarkReaderExtension.build/Objects-normal/arm64/SharedModels.dia",
+    "index-unit-output-path" : "/DarkReader.build/Debug-iphoneos/DarkReaderExtension.build/Objects-normal/arm64/SharedModels.o",
+    "llvm-bc" : "/Users/bytedance/Documents/Code/toolforsafari/DarkReader/DarkReader/build/DarkReader.build/Debug-iphoneos/DarkReaderExtension.build/Objects-normal/arm64/SharedModels.bc",
+    "object" : "/Users/bytedance/Documents/Code/toolforsafari/DarkReader/DarkReader/build/DarkReader.build/Debug-iphoneos/DarkReaderExtension.build/Objects-normal/arm64/SharedModels.o",
+    "swift-dependencies" : "/Users/bytedance/Documents/Code/toolforsafari/DarkReader/DarkReader/build/DarkReader.build/Debug-iphoneos/DarkReaderExtension.build/Objects-normal/arm64/SharedModels.swiftdeps",
+    "swiftmodule" : "/Users/bytedance/Documents/Code/toolforsafari/DarkReader/DarkReader/build/DarkReader.build/Debug-iphoneos/DarkReaderExtension.build/Objects-normal/arm64/SharedModels~partial.swiftmodule"
+  }
+}
