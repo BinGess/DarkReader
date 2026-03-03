@@ -380,3 +380,4 @@
 "图像滤镜已应用" = "Image filter applied";
 "重置亮度" = "Reset brightness";
 "重置灰度" = "Reset grayscale";
+"themeEditor.slider.reset.accessibility" = "Reset %@";

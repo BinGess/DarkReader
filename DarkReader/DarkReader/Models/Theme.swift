@@ -49,21 +49,34 @@ struct DarkTheme: Codable, Identifiable, Equatable {
         Color(hex: linkColor) ?? Color(hex: "#4ea1f3")!
     }
 
-    var localizedDisplayName: String {
-        guard isBuiltin else { return name }
-
-        switch id {
-        case "theme_001":
-            return NSLocalizedString("theme.theme_001.name", comment: "")
-        case "theme_002":
-            return NSLocalizedString("theme.theme_002.name", comment: "")
-        case "theme_003":
-            return NSLocalizedString("theme.theme_003.name", comment: "")
-        case "theme_004":
-            return NSLocalizedString("theme.theme_004.name", comment: "")
-        default:
-            return name
+    var displayNameLocalizationKey: String {
+        if isBuiltin {
+            switch id {
+            case "theme_001":
+                return "theme.theme_001.name"
+            case "theme_002":
+                return "theme.theme_002.name"
+            case "theme_003":
+                return "theme.theme_003.name"
+            case "theme_004":
+                return "theme.theme_004.name"
+            default:
+                return name
+            }
         }
+        return name
+    }
+
+    var localizedDisplayName: String {
+        localizedDisplayName(language: .system)
+    }
+
+    func localizedDisplayName(language: AppLanguageOption) -> String {
+        DarkTheme.localizedString(
+            key: displayNameLocalizationKey,
+            fallback: name,
+            language: language
+        )
     }
 
     private enum CodingKeys: String, CodingKey {
@@ -145,6 +158,34 @@ struct DarkTheme: Codable, Identifiable, Equatable {
         try container.encode(isBuiltin, forKey: .isBuiltin)
         try container.encode(createdAt, forKey: .createdAt)
         try container.encode(updatedAt, forKey: .updatedAt)
+    }
+}
+
+extension DarkTheme {
+    static func localizedString(key: String, fallback: String, language: AppLanguageOption) -> String {
+        if let bundle = bundle(for: language) {
+            let localized = bundle.localizedString(forKey: key, value: fallback, table: nil)
+            return localized == key ? fallback : localized
+        }
+        let localized = NSLocalizedString(key, comment: "")
+        return localized == key ? fallback : localized
+    }
+
+    private static func bundle(for language: AppLanguageOption) -> Bundle? {
+        let resource: String
+        switch language {
+        case .system:
+            return nil
+        case .zhHans:
+            resource = "zh-Hans"
+        case .en:
+            resource = "en"
+        }
+        guard let path = Bundle.main.path(forResource: resource, ofType: "lproj"),
+              let bundle = Bundle(path: path) else {
+            return nil
+        }
+        return bundle
     }
 }
 

@@ -21,6 +21,7 @@
 
 // 缓存结构：{ [domain]: { config, theme, cachedAt } }
 const configCache = new Map();
+let lastKnownAppLanguage = 'system';
 // ★ 缩短为 800ms：App 端写入后，popup 下次打开能立即读到最新数据
 //   原来 5000ms 会导致 App 改完主题后 popup 最多要等 5 秒才刷新
 const CACHE_TTL = 800;
@@ -45,7 +46,27 @@ async function getConfigForDomain(domain, skipCache = false) {
       { action: 'getConfig', domain }
     );
 
-    if (response && response.theme) {
+    if (response && response.config) {
+      if (typeof response.config.appLanguage === 'string') {
+        lastKnownAppLanguage = response.config.appLanguage;
+      } else {
+        response.config.appLanguage = lastKnownAppLanguage;
+      }
+      syncActionTitle(response.config.appLanguage);
+
+      if (!response.theme) {
+        response.theme = {
+          backgroundColor: '#1e1e1e',
+          textColor: '#e0e0e0',
+          secondaryTextColor: '#999999',
+          linkColor: '#4da6ff',
+          borderColor: '#444444',
+          imageBrightness: 0.75,
+          imageGrayscale: 0,
+          dimImages: response.config.dimImages ?? true
+        };
+      }
+
       // 存入缓存
       configCache.set(domain, {
         config: response.config,
@@ -64,6 +85,7 @@ async function getConfigForDomain(domain, skipCache = false) {
       mode: 'auto',
       dimImages: true,
       ignoreNativeDarkMode: false,
+      appLanguage: lastKnownAppLanguage,
       siteMode: 'follow',
       siteThemeId: ''
     },
@@ -142,6 +164,10 @@ browser.runtime.onMessage.addListener((message, sender, sendResponse) => {
       ).then(() => {
         // ★ 全局配置变更后清除所有域名缓存，确保下次 getConfig 读取最新值
         invalidateCache('');
+        if (typeof message.config?.appLanguage === 'string') {
+          lastKnownAppLanguage = message.config.appLanguage;
+          syncActionTitle(lastKnownAppLanguage);
+        }
         // 如需立即更新当前页面主题，通知 content.js
         if (message.config.defaultThemeId) {
           getThemeById(message.config.defaultThemeId).then(theme => {
@@ -218,4 +244,9 @@ async function getThemeById(themeId) {
   } catch {
     return null;
   }
+}
+
+function syncActionTitle(appLanguageRaw) {
+  const title = appLanguageRaw === 'en' ? 'AutoDark' : '夜览';
+  browser.action.setTitle({ title }).catch(() => {});
 }

@@ -305,7 +305,7 @@ struct WebsiteSettingDetailView: View {
                 }
 
                 ForEach(dataManager.themes) { theme in
-                    Button(theme.localizedDisplayName) {
+                    Button(theme.localizedDisplayName(language: dataManager.globalConfig.appLanguage)) {
                         selectedThemeId = theme.id
                         if theme.id != dedicatedThemeId {
                             useCustomColors = false
@@ -486,7 +486,8 @@ struct WebsiteSettingDetailView: View {
     private var selectedThemeDisplayName: String {
         if selectedThemeId.isEmpty { return NSLocalizedString("website.theme.followDefault", comment: "") }
         if selectedThemeId == dedicatedThemeId { return NSLocalizedString("website.theme.siteSpecific", comment: "") }
-        return dataManager.themes.first(where: { $0.id == selectedThemeId })?.localizedDisplayName
+        return dataManager.themes.first(where: { $0.id == selectedThemeId })?
+            .localizedDisplayName(language: dataManager.globalConfig.appLanguage)
             ?? NSLocalizedString("website.theme.selected", comment: "")
     }
 
@@ -739,8 +740,14 @@ private struct WebsiteDomainRow: View {
     private var themeText: String {
         let format = NSLocalizedString("website.themePrefix", comment: "")
         guard let themeId = dataManager.siteRules[domain]?.themeId, !themeId.isEmpty else {
-            return String(format: format, dataManager.defaultTheme.localizedDisplayName)
+            return String(
+                format: format,
+                dataManager.defaultTheme.localizedDisplayName(language: dataManager.globalConfig.appLanguage)
+            )
         }
-        return String(format: format, dataManager.theme(id: themeId).localizedDisplayName)
+        return String(
+            format: format,
+            dataManager.theme(id: themeId).localizedDisplayName(language: dataManager.globalConfig.appLanguage)
+        )
     }
 }

@@ -1,8 +1,8 @@
 {
   "manifest_version": 3,
-  "name": "夜览",
+  "name": "AutoDark",
   "version": "1.0.0",
-  "description": "智能 Safari 深色模式扩展 - 护眼浏览更安心",
+  "description": "Smart Safari dark mode extension for comfortable browsing.",
 
   "permissions": [
     "activeTab",
@@ -35,7 +35,7 @@
 
   "action": {
     "default_popup": "popup.html",
-    "default_title": "夜览",
+    "default_title": "AutoDark",
     "default_icon": {
       "16":  "icons/icon16.png",
       "32":  "icons/icon32.png",

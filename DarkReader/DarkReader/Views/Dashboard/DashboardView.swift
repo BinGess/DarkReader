@@ -291,7 +291,9 @@ struct DashboardView: View {
             HStack(spacing: 10) {
                 dashboardMetric(
                     titleKey: "dashboard.metric.defaultTheme",
-                    value: dataManager.defaultTheme.localizedDisplayName
+                    value: dataManager.defaultTheme.localizedDisplayName(
+                        language: dataManager.globalConfig.appLanguage
+                    )
                 )
                 Image(systemName: "chevron.right")
                     .font(SustainabilityTypography.captionStrong)

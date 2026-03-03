@@ -20,6 +20,7 @@ let isPaused = false;
 let allThemes = [];
 let currentLanguage = 'zhHans';
 const SUPPORT_EMAIL = 'baibin1989@gmail.com';
+const POPUP_LANGUAGE_STORAGE_KEY = 'popupLanguage';
 
 const I18N = {
   zhHans: {
@@ -138,6 +139,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 });
 
 async function initialize() {
+  currentLanguage = loadPersistedLanguage();
   document.getElementById('domainLabel').textContent = t('domain.loading');
 
   const tabs = await browser.tabs.query({ active: true, currentWindow: true });
@@ -162,10 +164,13 @@ async function initialize() {
     // ★ 关键修复：主题用 defaultThemeId（全局默认），不用 siteThemeId（站点覆盖）
     //   这样主 App 设置的默认主题能在 popup 中正确显示
     currentThemeId = result.config?.defaultThemeId || 'theme_002';
-    currentLanguage = resolveLanguage(result.config?.appLanguage);
+    if (result.config?.appLanguage) {
+      currentLanguage = resolveLanguage(result.config.appLanguage);
+    }
   } else {
     currentLanguage = resolveLanguage('system');
   }
+  persistLanguage(currentLanguage);
 
   applyI18n();
 
@@ -511,6 +516,20 @@ function resolveLanguage(option) {
   const locale = (navigator.language || '').toLowerCase();
   if (locale.startsWith('zh')) return 'zhHans';
   return 'en';
+}
+
+function loadPersistedLanguage() {
+  try {
+    const stored = localStorage.getItem(POPUP_LANGUAGE_STORAGE_KEY);
+    if (stored === 'en' || stored === 'zhHans') return stored;
+  } catch (_) {}
+  return resolveLanguage('system');
+}
+
+function persistLanguage(language) {
+  try {
+    localStorage.setItem(POPUP_LANGUAGE_STORAGE_KEY, language);
+  } catch (_) {}
 }
 
 function t(key) {

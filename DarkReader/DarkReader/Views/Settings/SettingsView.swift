@@ -38,7 +38,7 @@ struct SettingsView: View {
                 }
                 .font(SustainabilityTypography.body)
             }
-            .navigationTitle("设置")
+            .navigationTitle(localized("设置", fallback: "Settings"))
             .navigationBarTitleDisplayMode(.inline)
         }
         .sustainabilityChrome()
@@ -364,6 +364,14 @@ struct SettingsView: View {
 
     private func localizedCount(_ key: String, _ count: Int) -> String {
         String(format: NSLocalizedString(key, comment: ""), count)
+    }
+
+    private func localized(_ key: String, fallback: String) -> String {
+        DarkTheme.localizedString(
+            key: key,
+            fallback: fallback,
+            language: dataManager.globalConfig.appLanguage
+        )
     }
 
     private func requestReview() {

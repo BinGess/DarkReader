@@ -39,6 +39,7 @@ struct ThemeManagerView: View {
                                 ThemeCard(
                                     theme: theme,
                                     isDefault: theme.id == dataManager.globalConfig.defaultThemeId,
+                                    appLanguage: dataManager.globalConfig.appLanguage,
                                     onSetDefault: { setDefault(theme) },
                                     onEdit: { editTheme(theme) },
                                     onDelete: nil
@@ -58,6 +59,7 @@ struct ThemeManagerView: View {
                                     ThemeCard(
                                         theme: theme,
                                         isDefault: theme.id == dataManager.globalConfig.defaultThemeId,
+                                        appLanguage: dataManager.globalConfig.appLanguage,
                                         onSetDefault: { setDefault(theme) },
                                         onEdit: { editTheme(theme) },
                                         onDelete: { requestDelete(theme) }
@@ -96,7 +98,12 @@ struct ThemeManagerView: View {
             }
             Button("取消", role: .cancel) {}
         } message: { theme in
-            Text(String(format: NSLocalizedString("theme.delete.message", comment: ""), theme.localizedDisplayName))
+            Text(
+                String(
+                    format: NSLocalizedString("theme.delete.message", comment: ""),
+                    theme.localizedDisplayName(language: dataManager.globalConfig.appLanguage)
+                )
+            )
         }
     }
 
@@ -218,6 +225,7 @@ struct ThemeManagerView: View {
 struct ThemeCard: View {
     let theme: DarkTheme
     let isDefault: Bool
+    let appLanguage: AppLanguageOption
     let onSetDefault: (() -> Void)?
     let onEdit: (() -> Void)?
     let onDelete: (() -> Void)?
@@ -252,10 +260,10 @@ struct ThemeCard: View {
 
                 HStack(spacing: 8) {
                     VStack(alignment: .leading, spacing: 3) {
-                        Text(theme.localizedDisplayName)
+                        Text(theme.localizedDisplayName(language: appLanguage))
                             .font(SustainabilityTypography.bodyStrong)
                             .lineLimit(1)
-                        Text(isDefault ? "当前默认主题" : "点击可设为默认")
+                        Text(LocalizedStringKey(isDefault ? "当前默认主题" : "点击可设为默认"))
                             .font(SustainabilityTypography.caption)
                             .foregroundColor(isDefault ? SustainabilityPalette.primary : .secondary)
                     }

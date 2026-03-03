@@ -27,7 +27,7 @@ struct ThemeEditorView: View {
         return !existingTheme.isBuiltin
     }
 
-    private var titleText: String {
+    private var titleKey: LocalizedStringKey {
         existingTheme == nil ? "新建主题" : "主题详情"
     }
 
@@ -126,7 +126,7 @@ struct ThemeEditorView: View {
                 .tint(SustainabilityPalette.primary)
                 .applyListBackgroundClear()
             }
-            .navigationTitle(titleText)
+            .navigationTitle(titleKey)
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .navigationBarLeading) {
@@ -161,7 +161,7 @@ struct ThemeEditorView: View {
             return
         }
 
-        name = existingTheme.isBuiltin ? existingTheme.localizedDisplayName : existingTheme.name
+        name = existingTheme.localizedDisplayName(language: dataManager.globalConfig.appLanguage)
         backgroundColor = Color(hex: existingTheme.backgroundColor) ?? backgroundColor
         textColor = Color(hex: existingTheme.textColor) ?? textColor
         imageBrightness = clampBrightness(existingTheme.imageBrightness)
@@ -380,6 +380,17 @@ private struct ImageAdjustmentSliderRow: View {
     let defaultValue: Double
     let displayFormatter: (Double) -> String
 
+    private var localizedTitle: String {
+        NSLocalizedString(title, comment: "")
+    }
+
+    private var resetAccessibilityLabel: String {
+        String(
+            format: NSLocalizedString("themeEditor.slider.reset.accessibility", comment: ""),
+            localizedTitle
+        )
+    }
+
     var body: some View {
         HStack(spacing: 10) {
             Text(LocalizedStringKey(title))
@@ -401,7 +412,7 @@ private struct ImageAdjustmentSliderRow: View {
                     .foregroundColor(.secondary.opacity(0.75))
             }
             .buttonStyle(.plain)
-            .accessibilityLabel("重置\(title)")
+            .accessibilityLabel(resetAccessibilityLabel)
         }
         .sustainabilityInteractiveRow()
     }

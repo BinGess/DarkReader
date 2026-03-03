@@ -101,7 +101,7 @@ private struct LaunchSplashView: View {
                     .clipShape(RoundedRectangle(cornerRadius: 22, style: .continuous))
                     .shadow(color: Color.black.opacity(isNight ? 0.22 : 0.08), radius: 12, x: 0, y: 6)
 
-                Text(NSLocalizedString("brand.appName", comment: ""))
+                Text(LocalizedStringKey("brand.appName"))
                     .font(.system(size: 30, weight: .bold, design: .rounded))
                     .foregroundColor(isNight ? .white : .primary)
             }
