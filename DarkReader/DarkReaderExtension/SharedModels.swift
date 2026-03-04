@@ -41,6 +41,11 @@ struct GlobalConfig: Codable, Equatable {
     var performanceMode: Bool
     var extensionEnabled: Bool
     var appLanguage: AppLanguageOption
+    var scheduleEnabled: Bool
+    var scheduleStartHour: Int
+    var scheduleStartMinute: Int
+    var scheduleEndHour: Int
+    var scheduleEndMinute: Int
 
     init() {
         self.mode = .auto
@@ -50,6 +55,11 @@ struct GlobalConfig: Codable, Equatable {
         self.performanceMode = false
         self.extensionEnabled = true
         self.appLanguage = .system
+        self.scheduleEnabled = false
+        self.scheduleStartHour = 22
+        self.scheduleStartMinute = 0
+        self.scheduleEndHour = 7
+        self.scheduleEndMinute = 0
     }
 
     private enum CodingKeys: String, CodingKey {
@@ -60,6 +70,11 @@ struct GlobalConfig: Codable, Equatable {
         case performanceMode
         case extensionEnabled
         case appLanguage
+        case scheduleEnabled
+        case scheduleStartHour
+        case scheduleStartMinute
+        case scheduleEndHour
+        case scheduleEndMinute
     }
 
     init(from decoder: Decoder) throws {
@@ -71,6 +86,11 @@ struct GlobalConfig: Codable, Equatable {
         self.performanceMode = try container.decodeIfPresent(Bool.self, forKey: .performanceMode) ?? false
         self.extensionEnabled = try container.decodeIfPresent(Bool.self, forKey: .extensionEnabled) ?? true
         self.appLanguage = try container.decodeIfPresent(AppLanguageOption.self, forKey: .appLanguage) ?? .system
+        self.scheduleEnabled = try container.decodeIfPresent(Bool.self, forKey: .scheduleEnabled) ?? false
+        self.scheduleStartHour = try container.decodeIfPresent(Int.self, forKey: .scheduleStartHour) ?? 22
+        self.scheduleStartMinute = try container.decodeIfPresent(Int.self, forKey: .scheduleStartMinute) ?? 0
+        self.scheduleEndHour = try container.decodeIfPresent(Int.self, forKey: .scheduleEndHour) ?? 7
+        self.scheduleEndMinute = try container.decodeIfPresent(Int.self, forKey: .scheduleEndMinute) ?? 0
     }
 
     func encode(to encoder: Encoder) throws {
@@ -82,6 +102,11 @@ struct GlobalConfig: Codable, Equatable {
         try container.encode(performanceMode, forKey: .performanceMode)
         try container.encode(extensionEnabled, forKey: .extensionEnabled)
         try container.encode(appLanguage, forKey: .appLanguage)
+        try container.encode(scheduleEnabled, forKey: .scheduleEnabled)
+        try container.encode(scheduleStartHour, forKey: .scheduleStartHour)
+        try container.encode(scheduleStartMinute, forKey: .scheduleStartMinute)
+        try container.encode(scheduleEndHour, forKey: .scheduleEndHour)
+        try container.encode(scheduleEndMinute, forKey: .scheduleEndMinute)
     }
 }
 
@@ -250,17 +275,33 @@ struct SiteRule: Codable, Equatable {
     var mode: SiteMode?
     var themeId: String?
     var updatedAt: Date
+    var brightness: Double
+    var contrast: Double
+    var focusMode: Bool
 
-    init(mode: SiteMode? = nil, themeId: String? = nil, updatedAt: Date = Date()) {
+    init(
+        mode: SiteMode? = nil,
+        themeId: String? = nil,
+        updatedAt: Date = Date(),
+        brightness: Double = 1.0,
+        contrast: Double = 1.0,
+        focusMode: Bool = false
+    ) {
         self.mode = mode
         self.themeId = themeId
         self.updatedAt = updatedAt
+        self.brightness = min(max(brightness, 0.5), 1.5)
+        self.contrast = min(max(contrast, 0.5), 1.5)
+        self.focusMode = focusMode
     }
 
     private enum CodingKeys: String, CodingKey {
         case mode
         case themeId
         case updatedAt
+        case brightness
+        case contrast
+        case focusMode
     }
 
     init(from decoder: Decoder) throws {
@@ -268,6 +309,9 @@ struct SiteRule: Codable, Equatable {
         self.mode = try container.decodeIfPresent(SiteMode.self, forKey: .mode)
         self.themeId = try container.decodeIfPresent(String.self, forKey: .themeId)
         self.updatedAt = try container.decodeIfPresent(Date.self, forKey: .updatedAt) ?? Date(timeIntervalSince1970: 0)
+        self.brightness = min(max(try container.decodeIfPresent(Double.self, forKey: .brightness) ?? 1.0, 0.5), 1.5)
+        self.contrast = min(max(try container.decodeIfPresent(Double.self, forKey: .contrast) ?? 1.0, 0.5), 1.5)
+        self.focusMode = try container.decodeIfPresent(Bool.self, forKey: .focusMode) ?? false
     }
 
     func encode(to encoder: Encoder) throws {
@@ -275,6 +319,9 @@ struct SiteRule: Codable, Equatable {
         try container.encodeIfPresent(mode, forKey: .mode)
         try container.encodeIfPresent(themeId, forKey: .themeId)
         try container.encode(updatedAt, forKey: .updatedAt)
+        try container.encode(brightness, forKey: .brightness)
+        try container.encode(contrast, forKey: .contrast)
+        try container.encode(focusMode, forKey: .focusMode)
     }
 }
 

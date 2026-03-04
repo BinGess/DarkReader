@@ -262,8 +262,8 @@ extension SharedDataManager {
     func save(siteRule: SiteRule, forDomain domain: String) {
         var normalizedRule = siteRule
         normalizedRule.updatedAt = Date()
-        if siteRule.mode == nil && (siteRule.themeId == nil || siteRule.themeId?.isEmpty == true) {
-            // 规则为空时删除该域名条目
+        if !siteRule.hasCustomSettings {
+            // 规则全部恢复默认时删除该域名条目（节省存储）
             siteRules.removeValue(forKey: domain)
         } else {
             siteRules[domain] = normalizedRule

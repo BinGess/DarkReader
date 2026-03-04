@@ -342,7 +342,7 @@ struct DimImagesGuideView: View {
             GuideBlockCard(title: "操作步骤", subtitle: "在应用内完成") {
                 GuideStepRow(index: 1, title: "打开控制台", detail: "进入首页的设置面板。")
                 GuideStepRow(index: 2, title: "进入高级策略", detail: "找到渲染策略相关开关。")
-                GuideStepRow(index: 3, title: "开启图片优化", detail: "打开“降低网页图片亮度”。")
+                GuideStepRow(index: 3, title: "开启图片优化", detail: "打开\"降低网页图片亮度\"。")
                 GuideStepRow(index: 4, title: "按需调节主题", detail: "搭配主题亮度和对比度微调。")
             }
 

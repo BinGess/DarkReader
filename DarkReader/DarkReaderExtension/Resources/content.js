@@ -417,12 +417,92 @@ svg {
     // 移除防闪白的临时样式（完整样式已覆盖）
     removeStyleById('__dr_flash__');
 
+    // 注入页面级亮度/对比度滤镜（站点精细调节）
+    applyPageFilter();
+
+    // 注入专注阅读模式样式
+    applyFocusMode();
+
     isActive = true;
+  }
+
+  /**
+   * 应用页面级亮度/对比度滤镜（站点精细调节功能）
+   * 通过对 <html> 元素的 CSS filter 实现，不影响深色主题颜色算法
+   */
+  function applyPageFilter() {
+    removeStyleById('__dr_filter__');
+    if (!currentConfig) return;
+
+    const brightness = currentConfig.siteBrightness ?? 1.0;
+    const contrast = currentConfig.siteContrast ?? 1.0;
+
+    // 亮度和对比度都是默认值则不注入（节省性能）
+    if (Math.abs(brightness - 1.0) < 0.01 && Math.abs(contrast - 1.0) < 0.01) return;
+
+    const filterStyle = document.createElement('style');
+    filterStyle.id = '__dr_filter__';
+    filterStyle.textContent = `
+/* DarkReader 站点精细调节 - 亮度/对比度 */
+html {
+  filter: brightness(${brightness.toFixed(2)}) contrast(${contrast.toFixed(2)}) !important;
+}
+`;
+    (document.head || document.documentElement).appendChild(filterStyle);
+  }
+
+  /**
+   * 应用专注阅读模式（淡化页面导航/侧边栏，突出主要内容）
+   */
+  function applyFocusMode() {
+    removeStyleById('__dr_focus__');
+    if (!currentConfig || !currentConfig.siteFocusMode) return;
+
+    const focusStyle = document.createElement('style');
+    focusStyle.id = '__dr_focus__';
+    focusStyle.textContent = `
+/* DarkReader 专注阅读模式 - 淡化非内容区域 */
+header, nav, footer, aside,
+[role="navigation"], [role="banner"], [role="contentinfo"], [role="complementary"],
+[class*="nav"], [class*="header"], [class*="footer"],
+[class*="sidebar"], [class*="side-bar"],
+[class*="menu"]:not([class*="content"]),
+[class*="toolbar"], [class*="breadcrumb"], [class*="pagination"] {
+  opacity: 0.35 !important;
+  transition: opacity 0.25s ease !important;
+}
+
+header:hover, header:focus-within,
+nav:hover, nav:focus-within,
+footer:hover, footer:focus-within,
+aside:hover, aside:focus-within,
+[role="navigation"]:hover, [role="navigation"]:focus-within,
+[role="banner"]:hover, [role="banner"]:focus-within,
+[role="contentinfo"]:hover, [role="contentinfo"]:focus-within,
+[class*="nav"]:hover, [class*="nav"]:focus-within,
+[class*="header"]:hover, [class*="header"]:focus-within,
+[class*="footer"]:hover, [class*="footer"]:focus-within,
+[class*="sidebar"]:hover, [class*="sidebar"]:focus-within,
+[class*="side-bar"]:hover, [class*="side-bar"]:focus-within,
+[class*="menu"]:hover, [class*="menu"]:focus-within,
+[class*="toolbar"]:hover, [class*="toolbar"]:focus-within {
+  opacity: 1 !important;
+}
+
+/* 主要内容区域保持完全可见 */
+main, article, [role="main"],
+[class*="content"]:not([class*="nav"]):not([class*="side"]),
+[class*="post"], [class*="article"], [class*="entry"],
+[class*="main"]:not([class*="nav"]) {
+  opacity: 1 !important;
+}
+`;
+    (document.head || document.documentElement).appendChild(focusStyle);
   }
 
   /** 移除所有 DarkReader 注入的样式，恢复网页原始外观 */
   function removeAllStyles() {
-    ['__dr_flash__', '__dr_full__'].forEach(removeStyleById);
+    ['__dr_flash__', '__dr_full__', '__dr_filter__', '__dr_focus__'].forEach(removeStyleById);
     isActive = false;
   }
 
@@ -477,7 +557,6 @@ svg {
     if (isPaused) return false;
     if (!currentConfig) return false;
 
-    const domain = currentDomain();
     const siteMode = currentConfig.siteMode || 'follow';
 
     // 站点规则优先级最高
@@ -488,8 +567,32 @@ svg {
     if (currentConfig.mode === 'on') return true;
     if (currentConfig.mode === 'off') return false;
 
+    // 定时模式（优先于 auto 的系统跟随）
+    if (currentConfig.scheduleEnabled) {
+      return isInScheduledTime(currentConfig);
+    }
+
     // auto 模式：跟随系统 prefers-color-scheme
     return window.matchMedia('(prefers-color-scheme: dark)').matches;
+  }
+
+  /**
+   * 判断当前时间是否处于定时深色模式区间
+   * 支持跨午夜区间，例如 22:00 - 07:00
+   */
+  function isInScheduledTime(config) {
+    const now = new Date();
+    const currentMinutes = now.getHours() * 60 + now.getMinutes();
+    const startMinutes = (config.scheduleStartHour || 22) * 60 + (config.scheduleStartMinute || 0);
+    const endMinutes = (config.scheduleEndHour || 7) * 60 + (config.scheduleEndMinute || 0);
+
+    if (startMinutes < endMinutes) {
+      // 同日区间，例如 08:00 - 20:00
+      return currentMinutes >= startMinutes && currentMinutes < endMinutes;
+    } else {
+      // 跨午夜区间，例如 22:00 - 07:00（start > end）
+      return currentMinutes >= startMinutes || currentMinutes < endMinutes;
+    }
   }
 
   /** 提取当前页面的主域名（去掉子域名前缀） */
@@ -736,6 +839,7 @@ svg {
       if (!result?.theme || !isActive) return;
 
       const newTheme = result.theme;
+      const newConfig = result.config;
 
       // 用背景色 + 文字色双重比对，判断主题是否真正发生变化
       // 避免无变化时重复注入（会导致轻微样式闪烁）
@@ -743,9 +847,20 @@ svg {
         newTheme.backgroundColor !== currentTheme?.backgroundColor ||
         newTheme.textColor !== currentTheme?.textColor;
 
+      // 检查站点精调参数是否变化
+      const filterChanged =
+        (newConfig?.siteBrightness ?? 1.0) !== (currentConfig?.siteBrightness ?? 1.0) ||
+        (newConfig?.siteContrast ?? 1.0) !== (currentConfig?.siteContrast ?? 1.0) ||
+        (newConfig?.siteFocusMode ?? false) !== (currentConfig?.siteFocusMode ?? false);
+
       if (themeChanged) {
         currentTheme = newTheme;
         injectFullStyle(currentTheme);
+      } else if (filterChanged) {
+        // 只更新滤镜和专注模式，不重注入整个深色样式
+        currentConfig = newConfig;
+        applyPageFilter();
+        applyFocusMode();
       }
 
     } catch (_) {
@@ -765,7 +880,10 @@ svg {
       case 'applyTheme':
         // popup 切换主题
         currentTheme = message.theme;
-        if (isActive) injectFullStyle(currentTheme);
+        if (isActive) {
+          injectFullStyle(currentTheme);
+          // injectFullStyle 已经调用了 applyPageFilter 和 applyFocusMode
+        }
         sendResponse({ ok: true });
         break;
 

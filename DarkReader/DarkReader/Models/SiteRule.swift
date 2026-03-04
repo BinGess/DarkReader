@@ -16,22 +16,45 @@ struct SiteRule: Codable, Equatable {
     var themeId: String?
     // 规则最近更新时间，用于多端冲突合并（保留最新修改）
     var updatedAt: Date
+    // 网页亮度微调（0.5-1.5，1.0 为默认，不改变深色主题，仅对整体页面调亮/暗）
+    var brightness: Double
+    // 网页对比度微调（0.5-1.5，1.0 为默认）
+    var contrast: Double
+    // 专注阅读模式：淡化页面导航栏/侧边栏，突出主要内容区域
+    var focusMode: Bool
 
     // 判断是否有任何自定义设置（用于 UI 展示"已自定义"角标）
     var hasCustomSettings: Bool {
-        mode != nil || (themeId != nil && themeId?.isEmpty == false)
+        mode != nil
+            || (themeId != nil && themeId?.isEmpty == false)
+            || abs(brightness - 1.0) > 0.01
+            || abs(contrast - 1.0) > 0.01
+            || focusMode
     }
 
-    init(mode: SiteMode? = nil, themeId: String? = nil, updatedAt: Date = Date()) {
+    init(
+        mode: SiteMode? = nil,
+        themeId: String? = nil,
+        updatedAt: Date = Date(),
+        brightness: Double = 1.0,
+        contrast: Double = 1.0,
+        focusMode: Bool = false
+    ) {
         self.mode = mode
         self.themeId = themeId
         self.updatedAt = updatedAt
+        self.brightness = min(max(brightness, 0.5), 1.5)
+        self.contrast = min(max(contrast, 0.5), 1.5)
+        self.focusMode = focusMode
     }
 
     private enum CodingKeys: String, CodingKey {
         case mode
         case themeId
         case updatedAt
+        case brightness
+        case contrast
+        case focusMode
     }
 
     init(from decoder: Decoder) throws {
@@ -39,6 +62,9 @@ struct SiteRule: Codable, Equatable {
         self.mode = try container.decodeIfPresent(SiteMode.self, forKey: .mode)
         self.themeId = try container.decodeIfPresent(String.self, forKey: .themeId)
         self.updatedAt = try container.decodeIfPresent(Date.self, forKey: .updatedAt) ?? Date(timeIntervalSince1970: 0)
+        self.brightness = min(max(try container.decodeIfPresent(Double.self, forKey: .brightness) ?? 1.0, 0.5), 1.5)
+        self.contrast = min(max(try container.decodeIfPresent(Double.self, forKey: .contrast) ?? 1.0, 0.5), 1.5)
+        self.focusMode = try container.decodeIfPresent(Bool.self, forKey: .focusMode) ?? false
     }
 
     func encode(to encoder: Encoder) throws {
@@ -46,6 +72,9 @@ struct SiteRule: Codable, Equatable {
         try container.encodeIfPresent(mode, forKey: .mode)
         try container.encodeIfPresent(themeId, forKey: .themeId)
         try container.encode(updatedAt, forKey: .updatedAt)
+        try container.encode(brightness, forKey: .brightness)
+        try container.encode(contrast, forKey: .contrast)
+        try container.encode(focusMode, forKey: .focusMode)
     }
 }
 

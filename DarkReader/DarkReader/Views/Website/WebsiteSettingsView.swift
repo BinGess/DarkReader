@@ -138,6 +138,11 @@ struct WebsiteSettingDetailView: View {
     @State private var showColorEditor = false
     @State private var justApplied = false
 
+    // 精细调节
+    @State private var brightness: Double = 1.0
+    @State private var contrast: Double = 1.0
+    @State private var focusMode: Bool = false
+
     @State private var backgroundColor: Color = Color(hex: "#1e1e1e")!
     @State private var textColor: Color = Color(hex: "#e0e0e0")!
     @State private var secondaryTextColor: Color = Color(hex: "#999999")!
@@ -162,6 +167,7 @@ struct WebsiteSettingDetailView: View {
                 VStack(alignment: .leading, spacing: 16) {
                     headerBlock
                     defaultSettingCard
+                    fineTuningCard
 
                     if useCustomColors {
                         colorPreviewCard
@@ -366,6 +372,131 @@ struct WebsiteSettingDetailView: View {
         .buttonStyle(.plain)
     }
 
+    // MARK: - 精细调节卡片（亮度/对比度/专注模式）
+
+    private var fineTuningCard: some View {
+        SustainabilityCard {
+            VStack(alignment: .leading, spacing: 0) {
+                SustainabilitySectionTitle(
+                    "精细调节",
+                    subtitle: "仅对 \(domain) 生效，不影响其他网站"
+                )
+                Divider()
+                    .overlay(Color.primary.opacity(0.09))
+                    .padding(.vertical, 14)
+
+                brightnessRow
+
+                Divider()
+                    .overlay(Color.primary.opacity(0.09))
+                    .padding(.vertical, 14)
+
+                contrastRow
+
+                Divider()
+                    .overlay(Color.primary.opacity(0.09))
+                    .padding(.vertical, 14)
+
+                focusModeRow
+            }
+        }
+        .padding(.horizontal, 18)
+    }
+
+    private var brightnessRow: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            HStack {
+                SiteSettingIconBadge(icon: "sun.max.fill", color: SustainabilityPalette.warm)
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("网页亮度")
+                        .font(SustainabilityTypography.bodyStrong)
+                    Text("调节整体页面明暗，不影响主题颜色")
+                        .font(SustainabilityTypography.caption)
+                        .foregroundColor(.secondary)
+                }
+                Spacer()
+                Text("\(Int(brightness * 100))%")
+                    .font(SustainabilityTypography.captionStrong.monospacedDigit())
+                    .foregroundColor(SustainabilityPalette.warm)
+                    .frame(width: 44, alignment: .trailing)
+            }
+
+            HStack(spacing: 10) {
+                Image(systemName: "moon.fill")
+                    .font(SustainabilityTypography.caption)
+                    .foregroundColor(.secondary)
+                Slider(value: $brightness, in: 0.5...1.5, step: 0.05)
+                    .tint(SustainabilityPalette.warm)
+                Image(systemName: "sun.max.fill")
+                    .font(SustainabilityTypography.caption)
+                    .foregroundColor(.secondary)
+            }
+
+            if abs(brightness - 1.0) > 0.01 {
+                Button("重置") { brightness = 1.0 }
+                    .font(SustainabilityTypography.caption)
+                    .foregroundColor(SustainabilityPalette.cta)
+            }
+        }
+        .sustainabilityInteractiveRow()
+    }
+
+    private var contrastRow: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            HStack {
+                SiteSettingIconBadge(icon: "circle.lefthalf.filled", color: SustainabilityPalette.info)
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("网页对比度")
+                        .font(SustainabilityTypography.bodyStrong)
+                    Text("提升对比度可增强文字可读性")
+                        .font(SustainabilityTypography.caption)
+                        .foregroundColor(.secondary)
+                }
+                Spacer()
+                Text("\(Int(contrast * 100))%")
+                    .font(SustainabilityTypography.captionStrong.monospacedDigit())
+                    .foregroundColor(SustainabilityPalette.info)
+                    .frame(width: 44, alignment: .trailing)
+            }
+
+            HStack(spacing: 10) {
+                Image(systemName: "circle.lefthalf.filled")
+                    .font(SustainabilityTypography.caption)
+                    .foregroundColor(.secondary)
+                Slider(value: $contrast, in: 0.5...1.5, step: 0.05)
+                    .tint(SustainabilityPalette.info)
+                Image(systemName: "circle.righthalf.filled")
+                    .font(SustainabilityTypography.caption)
+                    .foregroundColor(.secondary)
+            }
+
+            if abs(contrast - 1.0) > 0.01 {
+                Button("重置") { contrast = 1.0 }
+                    .font(SustainabilityTypography.caption)
+                    .foregroundColor(SustainabilityPalette.cta)
+            }
+        }
+        .sustainabilityInteractiveRow()
+    }
+
+    private var focusModeRow: some View {
+        HStack(alignment: .top, spacing: 12) {
+            SiteSettingIconBadge(icon: "text.page.fill", color: SustainabilityPalette.success)
+            VStack(alignment: .leading, spacing: 4) {
+                Text("专注阅读模式")
+                    .font(SustainabilityTypography.bodyStrong)
+                Text("淡化导航栏、侧边栏等非内容区域，聚焦主要内容。鼠标悬停可临时恢复。")
+                    .font(SustainabilityTypography.caption)
+                    .foregroundColor(.secondary)
+            }
+            Spacer()
+            Toggle("", isOn: $focusMode)
+                .labelsHidden()
+                .tint(SustainabilityPalette.success)
+        }
+        .sustainabilityInteractiveRow()
+    }
+
     private var colorPreviewCard: some View {
         SustainabilityCard {
             VStack(alignment: .leading, spacing: 10) {
@@ -533,6 +664,9 @@ struct WebsiteSettingDetailView: View {
         selectedMode = rule?.mode ?? .follow
         selectedThemeId = rule?.themeId ?? ""
         useCustomColors = selectedThemeId == dedicatedThemeId
+        brightness = rule?.brightness ?? 1.0
+        contrast = rule?.contrast ?? 1.0
+        focusMode = rule?.focusMode ?? false
         refreshColorFromTheme()
         lastRuleSnapshot = ruleSnapshot()
     }
@@ -576,7 +710,16 @@ struct WebsiteSettingDetailView: View {
             themeIdForRule = dedicatedThemeId
         }
 
-        dataManager.save(siteRule: SiteRule(mode: modeForRule, themeId: themeIdForRule), forDomain: domain)
+        dataManager.save(
+            siteRule: SiteRule(
+                mode: modeForRule,
+                themeId: themeIdForRule,
+                brightness: brightness,
+                contrast: contrast,
+                focusMode: focusMode
+            ),
+            forDomain: domain
+        )
         lastRuleSnapshot = ruleSnapshot()
     }
 
@@ -584,6 +727,9 @@ struct WebsiteSettingDetailView: View {
         selectedMode = .follow
         selectedThemeId = ""
         useCustomColors = false
+        brightness = 1.0
+        contrast = 1.0
+        focusMode = false
         refreshColorFromTheme()
         saveSiteSettings()
     }
@@ -593,7 +739,10 @@ struct WebsiteSettingDetailView: View {
         let modeRaw = rule?.mode?.rawValue ?? "follow"
         let themeId = rule?.themeId ?? ""
         let updatedAt = rule?.updatedAt.timeIntervalSince1970 ?? 0
-        return "\(modeRaw)|\(themeId)|\(updatedAt)"
+        let bri = rule?.brightness ?? 1.0
+        let con = rule?.contrast ?? 1.0
+        let foc = rule?.focusMode ?? false
+        return "\(modeRaw)|\(themeId)|\(updatedAt)|\(bri)|\(con)|\(foc)"
     }
 
     private func applyRecommendedPalette() {

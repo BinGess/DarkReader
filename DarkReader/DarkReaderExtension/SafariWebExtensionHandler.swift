@@ -62,8 +62,16 @@ class SafariWebExtensionHandler: NSObject, NSExtensionRequestHandling {
 
         case "saveRule":
             let domain = messageDict["domain"] as? String ?? ""
-            let rule   = messageDict["rule"]   as? [String: String] ?? [:]
-            dataStore.saveSiteRule(domain: domain, modeRaw: rule["mode"], themeId: rule["themeId"])
+            let rule   = messageDict["rule"]   as? [String: Any] ?? [:]
+            // brightness/contrast/focusMode 为 nil 时保留 App Groups 中的现有值（popup 不传这些字段）
+            dataStore.saveSiteRule(
+                domain: domain,
+                modeRaw: rule["mode"] as? String,
+                themeId: rule["themeId"] as? String,
+                brightness: rule["brightness"] as? Double,
+                contrast: rule["contrast"] as? Double,
+                focusMode: rule["focusMode"] as? Bool
+            )
             responseData = ["ok": true]
 
         case "saveGlobalConfig":
@@ -232,7 +240,17 @@ private class ExtensionDataStore {
                 "performanceMode": config.performanceMode,
                 "appLanguage": config.appLanguage.rawValue,
                 "siteMode": rule?.mode?.rawValue ?? "follow",
-                "siteThemeId": rule?.themeId ?? ""
+                "siteThemeId": rule?.themeId ?? "",
+                // 定时深色模式
+                "scheduleEnabled": config.scheduleEnabled,
+                "scheduleStartHour": config.scheduleStartHour,
+                "scheduleStartMinute": config.scheduleStartMinute,
+                "scheduleEndHour": config.scheduleEndHour,
+                "scheduleEndMinute": config.scheduleEndMinute,
+                // 站点精细调节
+                "siteBrightness": rule?.brightness ?? 1.0,
+                "siteContrast": rule?.contrast ?? 1.0,
+                "siteFocusMode": rule?.focusMode ?? false
             ] as [String: Any],
             "theme": [
                 "backgroundColor": theme.backgroundColor,
@@ -267,16 +285,38 @@ private class ExtensionDataStore {
 
     // MARK: - 写入
 
-    func saveSiteRule(domain: String, modeRaw: String?, themeId: String?) {
+    func saveSiteRule(
+        domain: String,
+        modeRaw: String?,
+        themeId: String?,
+        brightness: Double? = nil,   // nil 表示保留现有值
+        contrast: Double? = nil,     // nil 表示保留现有值
+        focusMode: Bool? = nil       // nil 表示保留现有值
+    ) {
         var rules = siteRules
         let mode = modeRaw.flatMap { SiteMode(rawValue: $0) }
         let cleanThemeId = themeId?.isEmpty == false ? themeId : nil
         let domainKey = domain.mainDomain
 
-        if mode == nil && cleanThemeId == nil {
+        // 读取现有规则，用于保留精调参数（popup 保存时不会传这些值）
+        let existing = rules[domainKey]
+        let finalBrightness = brightness ?? existing?.brightness ?? 1.0
+        let finalContrast = contrast ?? existing?.contrast ?? 1.0
+        let finalFocusMode = focusMode ?? existing?.focusMode ?? false
+
+        let hasFinetuning = abs(finalBrightness - 1.0) > 0.01 || abs(finalContrast - 1.0) > 0.01 || finalFocusMode
+
+        if mode == nil && cleanThemeId == nil && !hasFinetuning {
             rules.removeValue(forKey: domainKey)
         } else {
-            rules[domainKey] = SiteRule(mode: mode, themeId: cleanThemeId, updatedAt: Date())
+            rules[domainKey] = SiteRule(
+                mode: mode,
+                themeId: cleanThemeId,
+                updatedAt: Date(),
+                brightness: finalBrightness,
+                contrast: finalContrast,
+                focusMode: finalFocusMode
+            )
         }
 
         guard let data = try? JSONEncoder().encode(rules) else { return }
@@ -322,6 +362,21 @@ private class ExtensionDataStore {
         }
         if let themeId = dict["defaultThemeId"] as? String {
             config.defaultThemeId = themeId
+        }
+        if let scheduleEnabled = dict["scheduleEnabled"] as? Bool {
+            config.scheduleEnabled = scheduleEnabled
+        }
+        if let scheduleStartHour = dict["scheduleStartHour"] as? Int {
+            config.scheduleStartHour = scheduleStartHour
+        }
+        if let scheduleStartMinute = dict["scheduleStartMinute"] as? Int {
+            config.scheduleStartMinute = scheduleStartMinute
+        }
+        if let scheduleEndHour = dict["scheduleEndHour"] as? Int {
+            config.scheduleEndHour = scheduleEndHour
+        }
+        if let scheduleEndMinute = dict["scheduleEndMinute"] as? Int {
+            config.scheduleEndMinute = scheduleEndMinute
         }
 
         guard let data = try? JSONEncoder().encode(config) else { return }

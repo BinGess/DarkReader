@@ -9,7 +9,6 @@ import SwiftUI
 
 struct ThemeManagerView: View {
     @EnvironmentObject var dataManager: SharedDataManager
-    @Environment(\.colorScheme) private var colorScheme
     @State private var showEditor = false
     @State private var showThemeLibrary = false
     @State private var editingTheme: DarkTheme? = nil
@@ -28,10 +27,12 @@ struct ThemeManagerView: View {
 
                 ScrollView {
                     VStack(alignment: .leading, spacing: 16) {
-                        sustainabilitySummary
+                        // 当前激活主题大展示卡
+                        activeThemeShowcase
                             .padding(.horizontal)
                             .padding(.top, 8)
 
+                        // 内置主题网格
                         sectionHeader("内置主题")
                             .padding(.horizontal)
                         LazyVGrid(columns: columns, spacing: 12) {
@@ -48,6 +49,7 @@ struct ThemeManagerView: View {
                         }
                         .padding(.horizontal)
 
+                        // 自定义主题网格（有时才显示）
                         let customThemes = dataManager.themes
                             .filter { !$0.isBuiltin }
                             .sorted { $0.updatedAt > $1.updatedAt }
@@ -107,6 +109,96 @@ struct ThemeManagerView: View {
         }
     }
 
+    // MARK: - 当前激活主题大展示
+
+    private var activeThemeShowcase: some View {
+        let activeTheme = dataManager.defaultTheme
+        return SustainabilityCard {
+            VStack(alignment: .leading, spacing: 14) {
+                // 标题行
+                HStack(alignment: .top) {
+                    VStack(alignment: .leading, spacing: 3) {
+                        Text("当前默认主题")
+                            .font(SustainabilityTypography.caption)
+                            .foregroundColor(.secondary)
+                        Text(activeTheme.localizedDisplayName(language: dataManager.globalConfig.appLanguage))
+                            .font(SustainabilityTypography.title)
+                    }
+                    Spacer()
+                    SustainabilityStatusPill(
+                        icon: "checkmark.seal.fill",
+                        text: "默认",
+                        color: SustainabilityPalette.primary
+                    )
+                }
+
+                // 大尺寸颜色预览
+                ZStack {
+                    RoundedRectangle(cornerRadius: 16, style: .continuous)
+                        .fill(activeTheme.backgroundSwiftUIColor)
+                        .frame(height: 110)
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 16, style: .continuous)
+                                .stroke((Color(hex: activeTheme.borderColor) ?? .gray).opacity(0.4), lineWidth: 1)
+                        )
+
+                    VStack(spacing: 8) {
+                        Text("夜览 · 护眼深色阅读")
+                            .font(.system(size: 17, weight: .semibold))
+                            .foregroundColor(activeTheme.textSwiftUIColor)
+                        HStack(spacing: 16) {
+                            swatch(activeTheme.backgroundSwiftUIColor, label: "背景")
+                            swatch(activeTheme.textSwiftUIColor, label: "文字")
+                            swatch(activeTheme.linkSwiftUIColor, label: "链接")
+                            swatch(Color(hex: activeTheme.borderColor) ?? .gray, label: "边框")
+                        }
+                    }
+                }
+
+                // 统计行 + 切换提示
+                HStack(spacing: 12) {
+                    statChip(
+                        icon: "paintpalette.fill",
+                        label: "共 \(dataManager.themes.count) 套主题",
+                        color: SustainabilityPalette.primary
+                    )
+                    statChip(
+                        icon: "square.and.pencil",
+                        label: "自定义 \(dataManager.themes.filter { !$0.isBuiltin }.count) 套",
+                        color: SustainabilityPalette.cta
+                    )
+                    Spacer()
+                    Text("点击卡片切换")
+                        .font(SustainabilityTypography.caption)
+                        .foregroundColor(.secondary)
+                }
+            }
+        }
+    }
+
+    private func swatch(_ color: Color, label: String) -> some View {
+        VStack(spacing: 4) {
+            Circle()
+                .fill(color)
+                .frame(width: 20, height: 20)
+                .overlay(Circle().stroke(Color.white.opacity(0.3), lineWidth: 0.5))
+            Text(label)
+                .font(.system(size: 9))
+                .foregroundColor((Color(hex: "#e0e0e0") ?? .white).opacity(0.7))
+        }
+    }
+
+    private func statChip(icon: String, label: String, color: Color) -> some View {
+        HStack(spacing: 5) {
+            Image(systemName: icon)
+                .font(.system(size: 11))
+                .foregroundColor(color)
+            Text(label)
+                .font(SustainabilityTypography.caption)
+                .foregroundColor(.secondary)
+        }
+    }
+
     private var floatingAddButton: some View {
         Menu {
             Button("新建主题", systemImage: "square.and.pencil") {
@@ -136,38 +228,6 @@ struct ThemeManagerView: View {
                 .padding(.bottom, 20)
         }
         .accessibilityLabel("添加主题")
-    }
-
-    private var sustainabilitySummary: some View {
-        SustainabilityCard {
-            HStack(spacing: 10) {
-                summaryBlock(
-                    title: "总主题数",
-                    value: "\(dataManager.themes.count)",
-                    color: SustainabilityPalette.primary
-                )
-                summaryBlock(
-                    title: "自定义",
-                    value: "\(dataManager.themes.filter { !$0.isBuiltin }.count)",
-                    color: SustainabilityPalette.cta
-                )
-            }
-        }
-    }
-
-    private func summaryBlock(title: String, value: String, color: Color) -> some View {
-        VStack(alignment: .leading, spacing: 2) {
-            Text(LocalizedStringKey(title))
-                .font(SustainabilityTypography.caption)
-                .foregroundColor(.secondary)
-            Text(value)
-                .font(SustainabilityTypography.title)
-                .foregroundColor(color)
-        }
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .padding(10)
-        .background(SustainabilityPalette.elevated(colorScheme))
-        .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
     }
 
     private func setDefault(_ theme: DarkTheme) {

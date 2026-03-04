@@ -24,6 +24,16 @@ struct GlobalConfig: Codable, Equatable {
     var extensionEnabled: Bool
     // 语言偏好：跟随系统 / 中文 / 英文
     var appLanguage: AppLanguageOption
+    // 定时深色模式开关
+    var scheduleEnabled: Bool
+    // 深色模式开始时间（小时，0-23）
+    var scheduleStartHour: Int
+    // 深色模式开始时间（分钟，0-59）
+    var scheduleStartMinute: Int
+    // 深色模式结束时间（小时，0-23）
+    var scheduleEndHour: Int
+    // 深色模式结束时间（分钟，0-59）
+    var scheduleEndMinute: Int
 
     // 默认初始化（新用户首次启动时使用）
     init() {
@@ -34,6 +44,11 @@ struct GlobalConfig: Codable, Equatable {
         self.performanceMode = false
         self.extensionEnabled = true
         self.appLanguage = .system
+        self.scheduleEnabled = false
+        self.scheduleStartHour = 22    // 默认晚上 22:00 开启
+        self.scheduleStartMinute = 0
+        self.scheduleEndHour = 7       // 默认早上 7:00 结束
+        self.scheduleEndMinute = 0
     }
 
     private enum CodingKeys: String, CodingKey {
@@ -44,6 +59,11 @@ struct GlobalConfig: Codable, Equatable {
         case performanceMode
         case extensionEnabled
         case appLanguage
+        case scheduleEnabled
+        case scheduleStartHour
+        case scheduleStartMinute
+        case scheduleEndHour
+        case scheduleEndMinute
     }
 
     init(from decoder: Decoder) throws {
@@ -55,6 +75,11 @@ struct GlobalConfig: Codable, Equatable {
         self.performanceMode = try container.decodeIfPresent(Bool.self, forKey: .performanceMode) ?? false
         self.extensionEnabled = try container.decodeIfPresent(Bool.self, forKey: .extensionEnabled) ?? true
         self.appLanguage = try container.decodeIfPresent(AppLanguageOption.self, forKey: .appLanguage) ?? .system
+        self.scheduleEnabled = try container.decodeIfPresent(Bool.self, forKey: .scheduleEnabled) ?? false
+        self.scheduleStartHour = try container.decodeIfPresent(Int.self, forKey: .scheduleStartHour) ?? 22
+        self.scheduleStartMinute = try container.decodeIfPresent(Int.self, forKey: .scheduleStartMinute) ?? 0
+        self.scheduleEndHour = try container.decodeIfPresent(Int.self, forKey: .scheduleEndHour) ?? 7
+        self.scheduleEndMinute = try container.decodeIfPresent(Int.self, forKey: .scheduleEndMinute) ?? 0
     }
 
     func encode(to encoder: Encoder) throws {
@@ -66,6 +91,37 @@ struct GlobalConfig: Codable, Equatable {
         try container.encode(performanceMode, forKey: .performanceMode)
         try container.encode(extensionEnabled, forKey: .extensionEnabled)
         try container.encode(appLanguage, forKey: .appLanguage)
+        try container.encode(scheduleEnabled, forKey: .scheduleEnabled)
+        try container.encode(scheduleStartHour, forKey: .scheduleStartHour)
+        try container.encode(scheduleStartMinute, forKey: .scheduleStartMinute)
+        try container.encode(scheduleEndHour, forKey: .scheduleEndHour)
+        try container.encode(scheduleEndMinute, forKey: .scheduleEndMinute)
+    }
+
+    // MARK: - 定时模式辅助属性
+
+    /// 当前时间是否处于定时深色模式区间内
+    var isInScheduledTime: Bool {
+        guard scheduleEnabled else { return false }
+        let now = Calendar.current.dateComponents([.hour, .minute], from: Date())
+        let currentMinutes = (now.hour ?? 0) * 60 + (now.minute ?? 0)
+        let startMinutes = scheduleStartHour * 60 + scheduleStartMinute
+        let endMinutes = scheduleEndHour * 60 + scheduleEndMinute
+
+        if startMinutes < endMinutes {
+            // 同日区间，例如 08:00 - 20:00
+            return currentMinutes >= startMinutes && currentMinutes < endMinutes
+        } else {
+            // 跨午夜区间，例如 22:00 - 07:00（开始 > 结束）
+            return currentMinutes >= startMinutes || currentMinutes < endMinutes
+        }
+    }
+
+    /// 格式化时间显示，如 "22:00 - 07:00"
+    var scheduleTimeDescription: String {
+        String(format: "%02d:%02d – %02d:%02d",
+               scheduleStartHour, scheduleStartMinute,
+               scheduleEndHour, scheduleEndMinute)
     }
 }
 

@@ -242,7 +242,7 @@ struct OnboardingView: View {
             imageName: "puzzlepiece.extension.fill",
             imageColor: SustainabilityPalette.primary,
             title: "选择管理扩展",
-            description: "在菜单中找到“管理扩展”，进入扩展开关页。"
+            description: "在菜单中找到\"管理扩展\"，进入扩展开关页。"
         ),
         OnboardingStep(
             imageName: "shield.lefthalf.filled",
@@ -254,7 +254,7 @@ struct OnboardingView: View {
             imageName: "checkmark.shield.fill",
             imageColor: SustainabilityPalette.success,
             title: "选择始终允许",
-            description: "在权限提示中选择“始终允许”，保障所有站点可以应用策略。"
+            description: "在权限提示中选择\"始终允许\"，保障所有站点可以应用策略。"
         ),
         OnboardingStep(
             imageName: "hand.thumbsup.fill",
