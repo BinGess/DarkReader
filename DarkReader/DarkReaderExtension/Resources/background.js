@@ -56,6 +56,7 @@ async function getConfigForDomain(domain, skipCache = false) {
 
       if (!response.theme) {
         response.theme = {
+          id: response.config.defaultThemeId || 'theme_002',
           backgroundColor: '#1e1e1e',
           textColor: '#e0e0e0',
           secondaryTextColor: '#999999',
@@ -63,6 +64,9 @@ async function getConfigForDomain(domain, skipCache = false) {
           borderColor: '#444444',
           imageBrightness: 0.75,
           imageGrayscale: 0,
+          category: 'reading',
+          eyeCareScore: 4,
+          warmthLevel: 3,
           dimImages: response.config.dimImages ?? true
         };
       }
@@ -83,13 +87,26 @@ async function getConfigForDomain(domain, skipCache = false) {
   return {
     config: {
       mode: 'auto',
+      defaultThemeId: 'theme_002',
       dimImages: true,
       ignoreNativeDarkMode: false,
       appLanguage: lastKnownAppLanguage,
       siteMode: 'follow',
-      siteThemeId: ''
+      siteThemeId: '',
+      scheduleEnabled: false,
+      scheduleTriggerSource: 'manual',
+      scheduleStartHour: 22,
+      scheduleStartMinute: 0,
+      scheduleEndHour: 7,
+      scheduleEndMinute: 0,
+      sunScheduleSunriseHour: 7,
+      sunScheduleSunriseMinute: 0,
+      sunScheduleSunsetHour: 18,
+      sunScheduleSunsetMinute: 0,
+      hideCookieBanners: false
     },
     theme: {
+      id: 'theme_002',
       backgroundColor: '#1e1e1e',
       textColor: '#e0e0e0',
       secondaryTextColor: '#999999',
@@ -97,6 +114,9 @@ async function getConfigForDomain(domain, skipCache = false) {
       borderColor: '#444444',
       imageBrightness: 0.75,
       imageGrayscale: 0,
+      category: 'reading',
+      eyeCareScore: 4,
+      warmthLevel: 3,
       dimImages: true
     }
   };
@@ -213,6 +233,20 @@ browser.runtime.onMessage.addListener((message, sender, sendResponse) => {
       ).then(() => sendResponse({ ok: true }))
        .catch(() => sendResponse({ ok: false }));
       return true;
+    }
+
+    case 'reportEyeCareUsage': {
+      browser.runtime.sendNativeMessage(
+        'com.timmy.darkreader.extension',
+        {
+          action: 'reportEyeCareUsage',
+          domain: message.domain || '',
+          durationSeconds: Number(message.durationSeconds || 0),
+          themeId: message.themeId || '',
+          time: new Date().toISOString()
+        }
+      ).catch(() => { /* 统计失败不影响主流程 */ });
+      break;
     }
   }
 });

@@ -170,7 +170,22 @@ struct DashboardView: View {
     private var scheduleStatusText: String {
         let cfg = dataManager.globalConfig
         guard cfg.scheduleEnabled else { return "未启用" }
-        return cfg.isInScheduledTime ? "深色进行中" : cfg.scheduleTimeDescription
+        switch cfg.scheduleTriggerSource {
+        case .system:
+            return colorScheme == .dark ? "跟随系统（深色）" : "跟随系统（浅色）"
+        case .manual, .sunsetSunrise:
+            return cfg.isInScheduledTime ? "深色进行中" : cfg.scheduleTimeDescription
+        }
+    }
+
+    private var todayReportSubtitle: String {
+        let duration = dataManager.todayEyeCareRecord.darkModeDuration
+        guard duration > 0 else { return "今日暂无数据" }
+        let minutes = Int(duration / 60)
+        if minutes >= 60 {
+            return "\(minutes / 60)h \(minutes % 60)m"
+        }
+        return "\(minutes)m"
     }
 
     private func metricBlock(icon: String, iconColor: Color, title: String, value: String) -> some View {
@@ -274,6 +289,19 @@ struct DashboardView: View {
                                 language: dataManager.globalConfig.appLanguage
                             ),
                             emphasize: true
+                        )
+                    }
+                    .buttonStyle(.plain)
+
+                    NavigationLink {
+                        EyeCareReportView()
+                    } label: {
+                        quickActionTile(
+                            icon: "chart.bar.xaxis",
+                            iconColor: SustainabilityPalette.success,
+                            title: "护眼报告",
+                            subtitle: todayReportSubtitle,
+                            emphasize: dataManager.todayEyeCareRecord.darkModeDuration > 0
                         )
                     }
                     .buttonStyle(.plain)
@@ -615,6 +643,59 @@ struct AdvancedStrategyView: View {
                             .onChange(of: dataManager.globalConfig.performanceMode) { _ in
                                 dataManager.saveConfig()
                             }
+
+                            Divider()
+
+                            Toggle(isOn: $dataManager.globalConfig.lowBatteryEyeCareEnabled) {
+                                strategyLabel(
+                                    icon: "battery.25",
+                                    iconColor: SustainabilityPalette.success,
+                                    title: "低电量自动护眼",
+                                    detail: "电量低于阈值时自动切换深色 + OLED 主题。"
+                                )
+                            }
+                            .onChange(of: dataManager.globalConfig.lowBatteryEyeCareEnabled) { _ in
+                                dataManager.saveConfig()
+                            }
+
+                            if dataManager.globalConfig.lowBatteryEyeCareEnabled {
+                                Picker("低电量阈值", selection: $dataManager.globalConfig.lowBatteryThreshold) {
+                                    Text("10%").tag(10)
+                                    Text("20%").tag(20)
+                                    Text("30%").tag(30)
+                                }
+                                .pickerStyle(.segmented)
+                                .onChange(of: dataManager.globalConfig.lowBatteryThreshold) { _ in
+                                    dataManager.saveConfig()
+                                }
+                                .sustainabilityInteractiveRow()
+
+                                Toggle(isOn: $dataManager.globalConfig.lowBatteryRestoreOnCharging) {
+                                    strategyLabel(
+                                        icon: "bolt.batteryblock.fill",
+                                        iconColor: SustainabilityPalette.info,
+                                        title: "充电后恢复原模式",
+                                        detail: "充电或电量恢复后自动还原此前配置。"
+                                    )
+                                }
+                                .onChange(of: dataManager.globalConfig.lowBatteryRestoreOnCharging) { _ in
+                                    dataManager.saveConfig()
+                                }
+                            }
+
+                            Divider()
+
+                            Toggle(isOn: $dataManager.globalConfig.hideCookieBanners) {
+                                strategyLabel(
+                                    icon: "hand.raised.slash.fill",
+                                    iconColor: SustainabilityPalette.cta,
+                                    title: "自动隐藏 Cookie 横幅",
+                                    detail: "仅注入 CSS 进行 display:none，不模拟点击。"
+                                )
+                            }
+                            .onChange(of: dataManager.globalConfig.hideCookieBanners) { _ in
+                                dataManager.saveConfig()
+                            }
                         }
                     }
                 }
@@ -642,6 +723,136 @@ struct AdvancedStrategyView: View {
             }
         }
         .sustainabilityInteractiveRow()
+    }
+}
+
+// MARK: - 护眼报告视图
+struct EyeCareReportView: View {
+    @EnvironmentObject var dataManager: SharedDataManager
+
+    var body: some View {
+        ZStack {
+            SustainabilityBackground()
+            ScrollView {
+                VStack(spacing: 12) {
+                    todaySummaryCard
+                    weeklyTrendCard
+                    siteDistributionCard
+                }
+                .padding(.horizontal, 16)
+                .padding(.top, 10)
+                .padding(.bottom, 24)
+            }
+        }
+        .navigationTitle("护眼报告")
+        .navigationBarTitleDisplayMode(.inline)
+        .sustainabilityChrome()
+    }
+
+    private var todaySummaryCard: some View {
+        let today = dataManager.todayEyeCareRecord
+        let reduction = dataManager.estimatedBlueLightReduction(for: today)
+        let weekActiveDays = dataManager.currentWeekEyeCareRecords.filter { $0.darkModeDuration > 0 }.count
+
+        return SustainabilityCard {
+            VStack(alignment: .leading, spacing: 10) {
+                SustainabilitySectionTitle("今日护眼报告", subtitle: "效果可见，持续积累")
+                summaryRow(icon: "moon.stars.fill", title: "深色浏览时长", value: formatDuration(today.darkModeDuration))
+                summaryRow(icon: "sun.max.trianglebadge.exclamationmark", title: "蓝光减少估算", value: "约 \(Int(reduction * 100))%")
+                summaryRow(icon: "globe", title: "护眼网站数", value: "\(today.sitesCount) 个")
+                summaryRow(icon: "calendar.badge.clock", title: "本周护眼天数", value: "\(weekActiveDays) / 7 天")
+
+                Text("蓝光减少为估算值，仅用于护眼效果感知，不构成医学结论。")
+                    .font(SustainabilityTypography.caption)
+                    .foregroundColor(.secondary)
+            }
+        }
+    }
+
+    private var weeklyTrendCard: some View {
+        let records = dataManager.currentWeekEyeCareRecords
+        let maxDuration = max(records.map(\.darkModeDuration).max() ?? 0, 1)
+
+        return SustainabilityCard {
+            VStack(alignment: .leading, spacing: 10) {
+                SustainabilitySectionTitle("本周趋势", subtitle: "每日深色浏览时长")
+                ForEach(records, id: \.date) { record in
+                    HStack(spacing: 10) {
+                        Text(record.date.formatted(.dateTime.weekday(.short)))
+                            .font(SustainabilityTypography.caption)
+                            .foregroundColor(.secondary)
+                            .frame(width: 34, alignment: .leading)
+
+                        GeometryReader { geo in
+                            ZStack(alignment: .leading) {
+                                RoundedRectangle(cornerRadius: 6, style: .continuous)
+                                    .fill(Color.secondary.opacity(0.14))
+                                RoundedRectangle(cornerRadius: 6, style: .continuous)
+                                    .fill(SustainabilityPalette.primary.opacity(0.85))
+                                    .frame(width: max(6, geo.size.width * CGFloat(record.darkModeDuration / maxDuration)))
+                            }
+                        }
+                        .frame(height: 10)
+
+                        Text(formatDuration(record.darkModeDuration))
+                            .font(SustainabilityTypography.caption)
+                            .foregroundColor(.secondary)
+                            .frame(width: 72, alignment: .trailing)
+                    }
+                    .frame(height: 18)
+                }
+            }
+        }
+    }
+
+    private var siteDistributionCard: some View {
+        let topSites = Array(dataManager.siteDistribution(for: Date()).prefix(8))
+
+        return SustainabilityCard {
+            VStack(alignment: .leading, spacing: 10) {
+                SustainabilitySectionTitle("站点护眼分布", subtitle: "今日各站点深色时长")
+
+                if topSites.isEmpty {
+                    Text("今日还没有可统计的护眼站点数据。")
+                        .font(SustainabilityTypography.caption)
+                        .foregroundColor(.secondary)
+                } else {
+                    ForEach(topSites, id: \.domain) { site in
+                        HStack {
+                            Text(site.domain)
+                                .font(SustainabilityTypography.bodyStrong)
+                                .lineLimit(1)
+                            Spacer()
+                            Text(formatDuration(site.duration))
+                                .font(SustainabilityTypography.caption)
+                                .foregroundColor(.secondary)
+                        }
+                        .sustainabilityInteractiveRow()
+                    }
+                }
+            }
+        }
+    }
+
+    private func summaryRow(icon: String, title: String, value: String) -> some View {
+        HStack {
+            Label(title, systemImage: icon)
+                .font(SustainabilityTypography.body)
+            Spacer()
+            Text(value)
+                .font(SustainabilityTypography.bodyStrong)
+        }
+    }
+
+    private func formatDuration(_ value: TimeInterval) -> String {
+        guard value > 0 else { return "0m" }
+        let totalMinutes = Int(value / 60)
+        let hours = totalMinutes / 60
+        let minutes = totalMinutes % 60
+        if hours > 0 {
+            return "\(hours)h \(minutes)m"
+        }
+        return "\(minutes)m"
     }
 }
 

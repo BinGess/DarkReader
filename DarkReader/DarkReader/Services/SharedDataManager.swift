@@ -28,6 +28,8 @@ enum SharedKeys {
     static let auxData        = "DarkReader_AuxData"
     static let errorLogs      = "DarkReader_ErrorLogs"
     static let feedbackRecords = "DarkReader_Feedback"
+    static let eyeCareDailyRecords = "DarkReader_EyeCareDailyRecords"
+    static let eyeCareSiteDurations = "DarkReader_EyeCareSiteDurations"
 }
 
 // MARK: - 错误日志模型（最多保留10条）
@@ -45,6 +47,15 @@ struct FeedbackRecord: Codable, Identifiable, Equatable {
     var themeId: String
     var content: String
     var time: Date
+}
+
+// MARK: - 护眼日报模型（按天聚合）
+struct DailyEyeCareRecord: Codable, Identifiable, Equatable {
+    var id: Date { Calendar.current.startOfDay(for: date) }
+    var date: Date
+    var darkModeDuration: TimeInterval
+    var sitesCount: Int
+    var dominantThemeId: String
 }
 
 // MARK: - SharedDataManager
@@ -69,6 +80,8 @@ class SharedDataManager: ObservableObject {
     private var lastVisitedSitesData: Data?
     private var lastErrorLogsData: Data?
     private var lastFeedbackData: Data?
+    private var lastEyeCareDailyRecordsData: Data?
+    private var lastEyeCareSiteDurationsData: Data?
 
     // MARK: - 发布的数据属性（SwiftUI 视图通过这些属性读取数据）
 
@@ -94,6 +107,11 @@ class SharedDataManager: ObservableObject {
 
     // 用户反馈记录
     @Published var feedbackRecords: [FeedbackRecord] = []
+
+    // 护眼日报记录（按天）
+    @Published var eyeCareDailyRecords: [DailyEyeCareRecord] = []
+    // 站点分布（dateKey -> [domain: seconds]）
+    @Published var eyeCareSiteDurations: [String: [String: TimeInterval]] = [:]
 
     // MARK: - 初始化
 
@@ -162,6 +180,9 @@ extension SharedDataManager {
         visitedSites = loadVisitedSites()
         errorLogs = loadErrorLogs()
         feedbackRecords = loadFeedbackRecords()
+        eyeCareDailyRecords = loadEyeCareDailyRecords()
+        eyeCareSiteDurations = loadEyeCareSiteDurations()
+        refreshSunScheduleIfNeeded()
         captureSharedSnapshots()
     }
 
@@ -211,6 +232,22 @@ extension SharedDataManager {
         guard let data = defaults.data(forKey: SharedKeys.feedbackRecords),
               let records = try? JSONDecoder().decode([FeedbackRecord].self, from: data) else {
             return []
+        }
+        return records
+    }
+
+    private func loadEyeCareDailyRecords() -> [DailyEyeCareRecord] {
+        guard let data = defaults.data(forKey: SharedKeys.eyeCareDailyRecords),
+              let records = try? JSONDecoder().decode([DailyEyeCareRecord].self, from: data) else {
+            return []
+        }
+        return records.sorted { $0.date < $1.date }
+    }
+
+    private func loadEyeCareSiteDurations() -> [String: [String: TimeInterval]] {
+        guard let data = defaults.data(forKey: SharedKeys.eyeCareSiteDurations),
+              let records = try? JSONDecoder().decode([String: [String: TimeInterval]].self, from: data) else {
+            return [:]
         }
         return records
     }
@@ -287,6 +324,16 @@ extension SharedDataManager {
         _ = persistDataWithRetry(data, key: SharedKeys.visitedSites)
     }
 
+    private func persistEyeCareDailyRecords() {
+        guard let data = try? JSONEncoder().encode(eyeCareDailyRecords) else { return }
+        _ = persistDataWithRetry(data, key: SharedKeys.eyeCareDailyRecords)
+    }
+
+    private func persistEyeCareSiteDurations() {
+        guard let data = try? JSONEncoder().encode(eyeCareSiteDurations) else { return }
+        _ = persistDataWithRetry(data, key: SharedKeys.eyeCareSiteDurations)
+    }
+
     func markVisited(domain: String, at date: Date = Date()) {
         visitedSites[domain.mainDomain] = date
         if visitedSites.count > 200 {
@@ -296,6 +343,46 @@ extension SharedDataManager {
             )
         }
         persistVisitedSites()
+    }
+
+    func appendEyeCareUsage(domain: String, duration: TimeInterval, themeId: String, at date: Date = Date()) {
+        let day = Calendar.current.startOfDay(for: date)
+        let dayKey = Self.dayKey(for: day)
+        let normalizedDomain = domain.mainDomain.isEmpty ? "unknown" : domain.mainDomain
+        let safeDuration = max(duration, 0)
+        guard safeDuration > 0 else { return }
+
+        var dayRecord = eyeCareDailyRecords.first { Calendar.current.isDate($0.date, inSameDayAs: day) }
+            ?? DailyEyeCareRecord(
+                date: day,
+                darkModeDuration: 0,
+                sitesCount: 0,
+                dominantThemeId: themeId.isEmpty ? globalConfig.defaultThemeId : themeId
+            )
+
+        dayRecord.darkModeDuration += safeDuration
+        if !themeId.isEmpty {
+            dayRecord.dominantThemeId = themeId
+        }
+
+        var siteDurations = eyeCareSiteDurations[dayKey] ?? [:]
+        siteDurations[normalizedDomain] = (siteDurations[normalizedDomain] ?? 0) + safeDuration
+        dayRecord.sitesCount = siteDurations.keys.count
+        eyeCareSiteDurations[dayKey] = siteDurations
+
+        if let idx = eyeCareDailyRecords.firstIndex(where: { Calendar.current.isDate($0.date, inSameDayAs: day) }) {
+            eyeCareDailyRecords[idx] = dayRecord
+        } else {
+            eyeCareDailyRecords.append(dayRecord)
+        }
+        eyeCareDailyRecords.sort { $0.date < $1.date }
+
+        if eyeCareDailyRecords.count > 120 {
+            eyeCareDailyRecords.removeFirst(eyeCareDailyRecords.count - 120)
+        }
+
+        persistEyeCareDailyRecords()
+        persistEyeCareSiteDurations()
     }
 
     /// 添加自定义主题
@@ -361,6 +448,8 @@ extension SharedDataManager {
         defaults.removeObject(forKey: SharedKeys.visitedSites)
         defaults.removeObject(forKey: SharedKeys.errorLogs)
         defaults.removeObject(forKey: SharedKeys.feedbackRecords)
+        defaults.removeObject(forKey: SharedKeys.eyeCareDailyRecords)
+        defaults.removeObject(forKey: SharedKeys.eyeCareSiteDurations)
         // 重置为默认状态
         globalConfig = GlobalConfig()
         themes = DarkTheme.builtins
@@ -368,6 +457,8 @@ extension SharedDataManager {
         visitedSites = [:]
         errorLogs = []
         feedbackRecords = []
+        eyeCareDailyRecords = []
+        eyeCareSiteDurations = [:]
         logger.info("所有本地数据已清除")
     }
 }
@@ -425,6 +516,8 @@ extension SharedDataManager {
         lastVisitedSitesData = defaults.data(forKey: SharedKeys.visitedSites)
         lastErrorLogsData = defaults.data(forKey: SharedKeys.errorLogs)
         lastFeedbackData = defaults.data(forKey: SharedKeys.feedbackRecords)
+        lastEyeCareDailyRecordsData = defaults.data(forKey: SharedKeys.eyeCareDailyRecords)
+        lastEyeCareSiteDurationsData = defaults.data(forKey: SharedKeys.eyeCareSiteDurations)
     }
 
     private func forceReloadFromShared() {
@@ -434,6 +527,8 @@ extension SharedDataManager {
         let currentVisitedSites = loadVisitedSites()
         let currentErrorLogs = loadErrorLogs()
         let currentFeedback = loadFeedbackRecords()
+        let currentEyeCareDailyRecords = loadEyeCareDailyRecords()
+        let currentEyeCareSiteDurations = loadEyeCareSiteDurations()
 
         isApplyingExternalSync = true
         defer { isApplyingExternalSync = false }
@@ -456,6 +551,12 @@ extension SharedDataManager {
         if feedbackRecords != currentFeedback {
             feedbackRecords = currentFeedback
         }
+        if eyeCareDailyRecords != currentEyeCareDailyRecords {
+            eyeCareDailyRecords = currentEyeCareDailyRecords
+        }
+        if eyeCareSiteDurations != currentEyeCareSiteDurations {
+            eyeCareSiteDurations = currentEyeCareSiteDurations
+        }
 
         captureSharedSnapshots()
     }
@@ -467,6 +568,8 @@ extension SharedDataManager {
         let visitedData = defaults.data(forKey: SharedKeys.visitedSites)
         let logsData = defaults.data(forKey: SharedKeys.errorLogs)
         let feedbackData = defaults.data(forKey: SharedKeys.feedbackRecords)
+        let eyeCareDailyData = defaults.data(forKey: SharedKeys.eyeCareDailyRecords)
+        let eyeCareSitesData = defaults.data(forKey: SharedKeys.eyeCareSiteDurations)
 
         let changed =
             globalData != lastGlobalConfigData ||
@@ -474,7 +577,9 @@ extension SharedDataManager {
             rulesData != lastSiteRulesData ||
             visitedData != lastVisitedSitesData ||
             logsData != lastErrorLogsData ||
-            feedbackData != lastFeedbackData
+            feedbackData != lastFeedbackData ||
+            eyeCareDailyData != lastEyeCareDailyRecordsData ||
+            eyeCareSitesData != lastEyeCareSiteDurationsData
 
         guard changed else { return }
         forceReloadFromShared()
@@ -518,14 +623,34 @@ extension SharedDataManager {
         return [
             "config": [
                 "mode": globalConfig.mode.rawValue,
+                "defaultThemeId": globalConfig.defaultThemeId,
                 "dimImages": globalConfig.dimImages,
                 "ignoreNativeDarkMode": globalConfig.ignoreNativeDarkMode,
                 "performanceMode": globalConfig.performanceMode,
                 "appLanguage": globalConfig.appLanguage.rawValue,
                 "siteMode": rule?.mode?.rawValue ?? "follow",
-                "siteThemeId": rule?.themeId ?? ""
+                "siteThemeId": rule?.themeId ?? "",
+                "scheduleEnabled": globalConfig.scheduleEnabled,
+                "scheduleTriggerSource": globalConfig.scheduleTriggerSource.rawValue,
+                "scheduleStartHour": globalConfig.scheduleStartHour,
+                "scheduleStartMinute": globalConfig.scheduleStartMinute,
+                "scheduleEndHour": globalConfig.scheduleEndHour,
+                "scheduleEndMinute": globalConfig.scheduleEndMinute,
+                "sunScheduleSunriseHour": globalConfig.sunScheduleSunriseHour,
+                "sunScheduleSunriseMinute": globalConfig.sunScheduleSunriseMinute,
+                "sunScheduleSunsetHour": globalConfig.sunScheduleSunsetHour,
+                "sunScheduleSunsetMinute": globalConfig.sunScheduleSunsetMinute,
+                "hideCookieBanners": globalConfig.hideCookieBanners,
+                "dailyEyeCareNotificationEnabled": globalConfig.dailyEyeCareNotificationEnabled,
+                "dailyEyeCareNotificationHour": globalConfig.dailyEyeCareNotificationHour,
+                "dailyEyeCareNotificationMinute": globalConfig.dailyEyeCareNotificationMinute,
+                "weeklyEyeCareNotificationEnabled": globalConfig.weeklyEyeCareNotificationEnabled,
+                "weeklyEyeCareNotificationWeekday": globalConfig.weeklyEyeCareNotificationWeekday,
+                "weeklyEyeCareNotificationHour": globalConfig.weeklyEyeCareNotificationHour,
+                "weeklyEyeCareNotificationMinute": globalConfig.weeklyEyeCareNotificationMinute
             ] as [String: Any],
             "theme": [
+                "id": effectiveTheme.id,
                 "backgroundColor": effectiveTheme.backgroundColor,
                 "textColor": effectiveTheme.textColor,
                 "secondaryTextColor": effectiveTheme.secondaryTextColor,
@@ -533,9 +658,78 @@ extension SharedDataManager {
                 "borderColor": effectiveTheme.borderColor,
                 "imageBrightness": effectiveTheme.imageBrightness,
                 "imageGrayscale": effectiveTheme.imageGrayscale,
+                "category": effectiveTheme.category.rawValue,
+                "eyeCareScore": effectiveTheme.eyeCareScore,
+                "warmthLevel": effectiveTheme.warmthLevel,
                 "dimImages": globalConfig.dimImages
             ] as [String: Any]
         ]
+    }
+
+    // MARK: - 护眼统计
+
+    var todayEyeCareRecord: DailyEyeCareRecord {
+        let today = Calendar.current.startOfDay(for: Date())
+        return eyeCareDailyRecords.first { Calendar.current.isDate($0.date, inSameDayAs: today) }
+            ?? DailyEyeCareRecord(date: today, darkModeDuration: 0, sitesCount: 0, dominantThemeId: globalConfig.defaultThemeId)
+    }
+
+    var currentWeekEyeCareRecords: [DailyEyeCareRecord] {
+        let calendar = Calendar.current
+        let today = calendar.startOfDay(for: Date())
+        let days = (0..<7).compactMap { calendar.date(byAdding: .day, value: -$0, to: today) }.reversed()
+        return days.map { day in
+            eyeCareDailyRecords.first { calendar.isDate($0.date, inSameDayAs: day) }
+                ?? DailyEyeCareRecord(date: day, darkModeDuration: 0, sitesCount: 0, dominantThemeId: globalConfig.defaultThemeId)
+        }
+    }
+
+    func siteDistribution(for date: Date) -> [(domain: String, duration: TimeInterval)] {
+        let key = Self.dayKey(for: date)
+        let dict = eyeCareSiteDurations[key] ?? [:]
+        return dict
+            .map { ($0.key, $0.value) }
+            .sorted { $0.1 > $1.1 }
+    }
+
+    func estimatedBlueLightReduction(for record: DailyEyeCareRecord) -> Double {
+        guard record.darkModeDuration > 0 else { return 0 }
+        let theme = theme(id: record.dominantThemeId)
+        let baseReduction = 0.30 + Double(max(theme.eyeCareScore - 1, 0)) * 0.04
+        let warmBonus = theme.warmthLevel >= 4 ? 0.10 : 0.0
+        return min(max(baseReduction + warmBonus, 0.30), 0.60)
+    }
+
+    func refreshSunScheduleIfNeeded(force: Bool = false) {
+        guard globalConfig.scheduleTriggerSource == .sunsetSunrise else { return }
+        guard let latitude = globalConfig.sunLatitude, let longitude = globalConfig.sunLongitude else { return }
+
+        let calendar = Calendar.current
+        let today = calendar.startOfDay(for: Date())
+        if !force, let updatedAt = globalConfig.sunScheduleUpdatedAt, calendar.isDate(updatedAt, inSameDayAs: today) {
+            return
+        }
+
+        guard let sun = SunTimeCalculator.sunriseSunset(for: Date(), latitude: latitude, longitude: longitude) else {
+            return
+        }
+        let sunrise = calendar.dateComponents([.hour, .minute], from: sun.sunrise)
+        let sunset = calendar.dateComponents([.hour, .minute], from: sun.sunset)
+        globalConfig.sunScheduleSunriseHour = sunrise.hour ?? 7
+        globalConfig.sunScheduleSunriseMinute = sunrise.minute ?? 0
+        globalConfig.sunScheduleSunsetHour = sunset.hour ?? 18
+        globalConfig.sunScheduleSunsetMinute = sunset.minute ?? 0
+        globalConfig.sunScheduleUpdatedAt = Date()
+        persistGlobalConfig()
+    }
+
+    static func dayKey(for date: Date) -> String {
+        let formatter = DateFormatter()
+        formatter.calendar = Calendar(identifier: .gregorian)
+        formatter.locale = Locale(identifier: "en_US_POSIX")
+        formatter.timeZone = .current
+        formatter.dateFormat = "yyyy-MM-dd"
+        return formatter.string(from: date)
     }
 
     /// iCloud 同步时合并远端数据（保留最新修改）
@@ -577,5 +771,84 @@ extension SharedDataManager {
         if rulesChanged {
             persistSiteRules()
         }
+    }
+}
+
+// MARK: - 日出日落计算（离线天文算法）
+struct SunTimeCalculator {
+    static func sunriseSunset(for date: Date, latitude: Double, longitude: Double) -> (sunrise: Date, sunset: Date)? {
+        let clampedLatitude = min(max(latitude, -89.8), 89.8)
+        guard let sunrise = calculate(for: date, latitude: clampedLatitude, longitude: longitude, sunrise: true),
+              let sunset = calculate(for: date, latitude: clampedLatitude, longitude: longitude, sunrise: false) else {
+            return nil
+        }
+        return (sunrise, sunset)
+    }
+
+    private static func calculate(for date: Date, latitude: Double, longitude: Double, sunrise: Bool) -> Date? {
+        let localCalendar = Calendar.current
+        let dayOfYear = localCalendar.ordinality(of: .day, in: .year, for: date) ?? 1
+        let lngHour = longitude / 15.0
+        let t = Double(dayOfYear) + ((sunrise ? 6.0 : 18.0) - lngHour) / 24.0
+
+        let meanAnomaly = (0.9856 * t) - 3.289
+        var trueLongitude = meanAnomaly
+            + (1.916 * sinDeg(meanAnomaly))
+            + (0.020 * sinDeg(2 * meanAnomaly))
+            + 282.634
+        trueLongitude = normalizeDegrees(trueLongitude)
+
+        var rightAscension = radToDeg(atan(0.91764 * tanDeg(trueLongitude)))
+        rightAscension = normalizeDegrees(rightAscension)
+
+        let lQuadrant = floor(trueLongitude / 90.0) * 90.0
+        let raQuadrant = floor(rightAscension / 90.0) * 90.0
+        rightAscension = (rightAscension + (lQuadrant - raQuadrant)) / 15.0
+
+        let sinDec = 0.39782 * sinDeg(trueLongitude)
+        let cosDec = cos(asin(sinDec))
+
+        let cosH = (cosDeg(90.833) - (sinDec * sinDeg(latitude))) / (cosDec * cosDeg(latitude))
+        if cosH > 1 || cosH < -1 {
+            return nil
+        }
+
+        let hourAngle = sunrise ? (360.0 - radToDeg(acos(cosH))) : radToDeg(acos(cosH))
+        let localHour = hourAngle / 15.0
+        let localMeanTime = localHour + rightAscension - (0.06571 * t) - 6.622
+        let universalTime = normalizeHours(localMeanTime - lngHour)
+
+        let comps = localCalendar.dateComponents([.year, .month, .day], from: date)
+        var utcCalendar = Calendar(identifier: .gregorian)
+        utcCalendar.timeZone = TimeZone(secondsFromGMT: 0) ?? .current
+        guard let utcStart = utcCalendar.date(
+            from: DateComponents(
+                timeZone: TimeZone(secondsFromGMT: 0),
+                year: comps.year,
+                month: comps.month,
+                day: comps.day
+            )
+        ) else {
+            return nil
+        }
+        return utcStart.addingTimeInterval(universalTime * 3600)
+    }
+
+    private static func sinDeg(_ value: Double) -> Double { sin(degToRad(value)) }
+    private static func cosDeg(_ value: Double) -> Double { cos(degToRad(value)) }
+    private static func tanDeg(_ value: Double) -> Double { tan(degToRad(value)) }
+    private static func degToRad(_ value: Double) -> Double { value * .pi / 180.0 }
+    private static func radToDeg(_ value: Double) -> Double { value * 180.0 / .pi }
+
+    private static func normalizeDegrees(_ value: Double) -> Double {
+        var v = value.truncatingRemainder(dividingBy: 360.0)
+        if v < 0 { v += 360.0 }
+        return v
+    }
+
+    private static func normalizeHours(_ value: Double) -> Double {
+        var v = value.truncatingRemainder(dividingBy: 24.0)
+        if v < 0 { v += 24.0 }
+        return v
     }
 }

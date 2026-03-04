@@ -69,6 +69,18 @@ enum ThemeCategory: String, Codable, CaseIterable, Identifiable {
         case .nature:       return 4
         }
     }
+
+    /// 分类典型暖色程度（1-5，5 最暖）
+    var typicalWarmthLevel: Int {
+        switch self {
+        case .eyeCare:      return 3
+        case .warmLight:    return 5
+        case .reading:      return 3
+        case .oled:         return 2
+        case .highContrast: return 2
+        case .nature:       return 4
+        }
+    }
 }
 
 // MARK: - 主题模型
@@ -96,6 +108,8 @@ struct DarkTheme: Codable, Identifiable, Equatable {
     var category: ThemeCategory
     // 护眼评分（1-5，5 最佳）
     var eyeCareScore: Int
+    // 暖色程度（1-5，5 最暖）
+    var warmthLevel: Int
     // 创建时间（用于排序）
     var createdAt: Date
     // 最近更新时间（用于多端冲突合并）
@@ -171,6 +185,7 @@ struct DarkTheme: Codable, Identifiable, Equatable {
         case isBuiltin
         case category
         case eyeCareScore
+        case warmthLevel
         case createdAt
         case updatedAt
     }
@@ -188,6 +203,7 @@ struct DarkTheme: Codable, Identifiable, Equatable {
         isBuiltin: Bool,
         category: ThemeCategory = .reading,
         eyeCareScore: Int? = nil,
+        warmthLevel: Int? = nil,
         createdAt: Date,
         updatedAt: Date = Date()
     ) {
@@ -203,6 +219,7 @@ struct DarkTheme: Codable, Identifiable, Equatable {
         self.isBuiltin = isBuiltin
         self.category = category
         self.eyeCareScore = min(max(eyeCareScore ?? category.typicalEyeCareScore, 1), 5)
+        self.warmthLevel = min(max(warmthLevel ?? category.typicalWarmthLevel, 1), 5)
         self.createdAt = createdAt
         self.updatedAt = updatedAt
     }
@@ -231,6 +248,10 @@ struct DarkTheme: Codable, Identifiable, Equatable {
             max(try container.decodeIfPresent(Int.self, forKey: .eyeCareScore) ?? decodedCategory.typicalEyeCareScore, 1),
             5
         )
+        self.warmthLevel = min(
+            max(try container.decodeIfPresent(Int.self, forKey: .warmthLevel) ?? decodedCategory.typicalWarmthLevel, 1),
+            5
+        )
         self.createdAt = try container.decodeIfPresent(Date.self, forKey: .createdAt) ?? Date(timeIntervalSince1970: 0)
         self.updatedAt = try container.decodeIfPresent(Date.self, forKey: .updatedAt) ?? self.createdAt
     }
@@ -249,6 +270,7 @@ struct DarkTheme: Codable, Identifiable, Equatable {
         try container.encode(isBuiltin, forKey: .isBuiltin)
         try container.encode(category, forKey: .category)
         try container.encode(eyeCareScore, forKey: .eyeCareScore)
+        try container.encode(warmthLevel, forKey: .warmthLevel)
         try container.encode(createdAt, forKey: .createdAt)
         try container.encode(updatedAt, forKey: .updatedAt)
     }

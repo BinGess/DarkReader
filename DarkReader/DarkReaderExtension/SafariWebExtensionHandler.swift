@@ -91,6 +91,19 @@ class SafariWebExtensionHandler: NSObject, NSExtensionRequestHandling {
             dataStore.appendFeedback(feedback)
             responseData = ["ok": true]
 
+        case "reportEyeCareUsage":
+            let domain = messageDict["domain"] as? String ?? ""
+            let themeId = messageDict["themeId"] as? String ?? ""
+            let durationSeconds = messageDict["durationSeconds"] as? Double ?? 0
+            let time = messageDict["time"] as? String
+            dataStore.appendEyeCareUsage(
+                domain: domain,
+                durationSeconds: durationSeconds,
+                themeId: themeId,
+                timeStr: time
+            )
+            responseData = ["ok": true]
+
         default:
             logger.warning("未知 action: \(action)")
             responseData = ["error": "unknown action: \(action)"]
@@ -243,16 +256,34 @@ private class ExtensionDataStore {
                 "siteThemeId": rule?.themeId ?? "",
                 // 定时深色模式
                 "scheduleEnabled": config.scheduleEnabled,
+                "scheduleTriggerSource": config.scheduleTriggerSource.rawValue,
                 "scheduleStartHour": config.scheduleStartHour,
                 "scheduleStartMinute": config.scheduleStartMinute,
                 "scheduleEndHour": config.scheduleEndHour,
                 "scheduleEndMinute": config.scheduleEndMinute,
+                "sunScheduleSunriseHour": config.sunScheduleSunriseHour,
+                "sunScheduleSunriseMinute": config.sunScheduleSunriseMinute,
+                "sunScheduleSunsetHour": config.sunScheduleSunsetHour,
+                "sunScheduleSunsetMinute": config.sunScheduleSunsetMinute,
+                "hideCookieBanners": config.hideCookieBanners,
+                "lowBatteryEyeCareEnabled": config.lowBatteryEyeCareEnabled,
+                "lowBatteryThreshold": config.lowBatteryThreshold,
+                "lowBatteryRestoreOnCharging": config.lowBatteryRestoreOnCharging,
+                "lowBatteryModeActive": config.lowBatteryModeActive,
+                "dailyEyeCareNotificationEnabled": config.dailyEyeCareNotificationEnabled,
+                "dailyEyeCareNotificationHour": config.dailyEyeCareNotificationHour,
+                "dailyEyeCareNotificationMinute": config.dailyEyeCareNotificationMinute,
+                "weeklyEyeCareNotificationEnabled": config.weeklyEyeCareNotificationEnabled,
+                "weeklyEyeCareNotificationWeekday": config.weeklyEyeCareNotificationWeekday,
+                "weeklyEyeCareNotificationHour": config.weeklyEyeCareNotificationHour,
+                "weeklyEyeCareNotificationMinute": config.weeklyEyeCareNotificationMinute,
                 // 站点精细调节
                 "siteBrightness": rule?.brightness ?? 1.0,
                 "siteContrast": rule?.contrast ?? 1.0,
                 "siteFocusMode": rule?.focusMode ?? false
             ] as [String: Any],
             "theme": [
+                "id": theme.id,
                 "backgroundColor": theme.backgroundColor,
                 "textColor": theme.textColor,
                 "secondaryTextColor": theme.secondaryTextColor,
@@ -260,6 +291,9 @@ private class ExtensionDataStore {
                 "borderColor": theme.borderColor,
                 "imageBrightness": theme.imageBrightness,
                 "imageGrayscale": theme.imageGrayscale,
+                "category": theme.category.rawValue,
+                "eyeCareScore": theme.eyeCareScore,
+                "warmthLevel": theme.warmthLevel,
                 "dimImages": config.dimImages
             ] as [String: Any]
         ]
@@ -278,7 +312,10 @@ private class ExtensionDataStore {
                 "linkColor": theme.linkColor,
                 "borderColor": theme.borderColor,
                 "imageBrightness": theme.imageBrightness,
-                "imageGrayscale": theme.imageGrayscale
+                "imageGrayscale": theme.imageGrayscale,
+                "category": theme.category.rawValue,
+                "eyeCareScore": theme.eyeCareScore,
+                "warmthLevel": theme.warmthLevel
             ] as [String: Any]
         }
     }
@@ -296,7 +333,7 @@ private class ExtensionDataStore {
         var rules = siteRules
         let mode = modeRaw.flatMap { SiteMode(rawValue: $0) }
         let cleanThemeId = themeId?.isEmpty == false ? themeId : nil
-        let domainKey = domain.mainDomain
+        let domainKey = domain.mainDomain.isEmpty ? "unknown" : domain.mainDomain
 
         // 读取现有规则，用于保留精调参数（popup 保存时不会传这些值）
         let existing = rules[domainKey]
@@ -366,6 +403,10 @@ private class ExtensionDataStore {
         if let scheduleEnabled = dict["scheduleEnabled"] as? Bool {
             config.scheduleEnabled = scheduleEnabled
         }
+        if let sourceRaw = dict["scheduleTriggerSource"] as? String,
+           let source = ScheduleTriggerSource(rawValue: sourceRaw) {
+            config.scheduleTriggerSource = source
+        }
         if let scheduleStartHour = dict["scheduleStartHour"] as? Int {
             config.scheduleStartHour = scheduleStartHour
         }
@@ -377,6 +418,60 @@ private class ExtensionDataStore {
         }
         if let scheduleEndMinute = dict["scheduleEndMinute"] as? Int {
             config.scheduleEndMinute = scheduleEndMinute
+        }
+        if let sunriseHour = dict["sunScheduleSunriseHour"] as? Int {
+            config.sunScheduleSunriseHour = sunriseHour
+        }
+        if let sunriseMinute = dict["sunScheduleSunriseMinute"] as? Int {
+            config.sunScheduleSunriseMinute = sunriseMinute
+        }
+        if let sunsetHour = dict["sunScheduleSunsetHour"] as? Int {
+            config.sunScheduleSunsetHour = sunsetHour
+        }
+        if let sunsetMinute = dict["sunScheduleSunsetMinute"] as? Int {
+            config.sunScheduleSunsetMinute = sunsetMinute
+        }
+        if let latitude = dict["sunLatitude"] as? Double {
+            config.sunLatitude = latitude
+        }
+        if let longitude = dict["sunLongitude"] as? Double {
+            config.sunLongitude = longitude
+        }
+        if let lowBatteryEnabled = dict["lowBatteryEyeCareEnabled"] as? Bool {
+            config.lowBatteryEyeCareEnabled = lowBatteryEnabled
+        }
+        if let lowBatteryThreshold = dict["lowBatteryThreshold"] as? Int {
+            config.lowBatteryThreshold = [10, 20, 30].contains(lowBatteryThreshold) ? lowBatteryThreshold : config.lowBatteryThreshold
+        }
+        if let restoreOnCharging = dict["lowBatteryRestoreOnCharging"] as? Bool {
+            config.lowBatteryRestoreOnCharging = restoreOnCharging
+        }
+        if let lowBatteryModeActive = dict["lowBatteryModeActive"] as? Bool {
+            config.lowBatteryModeActive = lowBatteryModeActive
+        }
+        if let hideCookieBanners = dict["hideCookieBanners"] as? Bool {
+            config.hideCookieBanners = hideCookieBanners
+        }
+        if let dailyEnabled = dict["dailyEyeCareNotificationEnabled"] as? Bool {
+            config.dailyEyeCareNotificationEnabled = dailyEnabled
+        }
+        if let dailyHour = dict["dailyEyeCareNotificationHour"] as? Int {
+            config.dailyEyeCareNotificationHour = min(max(dailyHour, 0), 23)
+        }
+        if let dailyMinute = dict["dailyEyeCareNotificationMinute"] as? Int {
+            config.dailyEyeCareNotificationMinute = min(max(dailyMinute, 0), 59)
+        }
+        if let weeklyEnabled = dict["weeklyEyeCareNotificationEnabled"] as? Bool {
+            config.weeklyEyeCareNotificationEnabled = weeklyEnabled
+        }
+        if let weeklyWeekday = dict["weeklyEyeCareNotificationWeekday"] as? Int {
+            config.weeklyEyeCareNotificationWeekday = min(max(weeklyWeekday, 1), 7)
+        }
+        if let weeklyHour = dict["weeklyEyeCareNotificationHour"] as? Int {
+            config.weeklyEyeCareNotificationHour = min(max(weeklyHour, 0), 23)
+        }
+        if let weeklyMinute = dict["weeklyEyeCareNotificationMinute"] as? Int {
+            config.weeklyEyeCareNotificationMinute = min(max(weeklyMinute, 0), 59)
         }
 
         guard let data = try? JSONEncoder().encode(config) else { return }
@@ -429,5 +524,71 @@ private class ExtensionDataStore {
         if let data = try? JSONEncoder().encode(records) {
             _ = persistDataWithRetry(data, key: SharedKeys.feedbackRecords)
         }
+    }
+
+    func appendEyeCareUsage(
+        domain: String,
+        durationSeconds: Double,
+        themeId: String,
+        timeStr: String?
+    ) {
+        let safeDuration = max(durationSeconds, 0)
+        guard safeDuration > 0.1 else { return }
+
+        let formatter = ISO8601DateFormatter()
+        let eventTime = timeStr.flatMap { formatter.date(from: $0) } ?? Date()
+        let calendar = Calendar.current
+        let day = calendar.startOfDay(for: eventTime)
+        let dayKey = Self.dayKey(for: day)
+        let domainKey = domain.mainDomain
+        let resolvedThemeId = themeId.isEmpty ? globalConfig.defaultThemeId : themeId
+
+        var dailyRecords: [DailyEyeCareRecord] = []
+        if let data = defaults.data(forKey: SharedKeys.eyeCareDailyRecords),
+           let decoded = try? JSONDecoder().decode([DailyEyeCareRecord].self, from: data) {
+            dailyRecords = decoded
+        }
+
+        var siteDurations: [String: [String: TimeInterval]] = [:]
+        if let data = defaults.data(forKey: SharedKeys.eyeCareSiteDurations),
+           let decoded = try? JSONDecoder().decode([String: [String: TimeInterval]].self, from: data) {
+            siteDurations = decoded
+        }
+
+        var currentRecord = dailyRecords.first { calendar.isDate($0.date, inSameDayAs: day) }
+            ?? DailyEyeCareRecord(date: day, darkModeDuration: 0, sitesCount: 0, dominantThemeId: resolvedThemeId)
+        currentRecord.darkModeDuration += safeDuration
+        currentRecord.dominantThemeId = resolvedThemeId
+
+        var daySites = siteDurations[dayKey] ?? [:]
+        daySites[domainKey] = (daySites[domainKey] ?? 0) + safeDuration
+        siteDurations[dayKey] = daySites
+        currentRecord.sitesCount = daySites.count
+
+        if let idx = dailyRecords.firstIndex(where: { calendar.isDate($0.date, inSameDayAs: day) }) {
+            dailyRecords[idx] = currentRecord
+        } else {
+            dailyRecords.append(currentRecord)
+        }
+        dailyRecords.sort { $0.date < $1.date }
+        if dailyRecords.count > 120 {
+            dailyRecords.removeFirst(dailyRecords.count - 120)
+        }
+
+        if let dailyData = try? JSONEncoder().encode(dailyRecords) {
+            _ = persistDataWithRetry(dailyData, key: SharedKeys.eyeCareDailyRecords)
+        }
+        if let siteData = try? JSONEncoder().encode(siteDurations) {
+            _ = persistDataWithRetry(siteData, key: SharedKeys.eyeCareSiteDurations)
+        }
+    }
+
+    private static func dayKey(for date: Date) -> String {
+        let formatter = DateFormatter()
+        formatter.calendar = Calendar(identifier: .gregorian)
+        formatter.locale = Locale(identifier: "en_US_POSIX")
+        formatter.timeZone = .current
+        formatter.dateFormat = "yyyy-MM-dd"
+        return formatter.string(from: date)
     }
 }

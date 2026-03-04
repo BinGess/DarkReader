@@ -24,31 +24,93 @@ struct GlobalConfig: Codable, Equatable {
     var extensionEnabled: Bool
     // 语言偏好：跟随系统 / 中文 / 英文
     var appLanguage: AppLanguageOption
+
     // 定时深色模式开关
     var scheduleEnabled: Bool
-    // 深色模式开始时间（小时，0-23）
+    // 定时触发来源：手动时间 / 跟随系统 / 跟随日落日出
+    var scheduleTriggerSource: ScheduleTriggerSource
+    // 手动定时开始时间（小时，0-23）
     var scheduleStartHour: Int
-    // 深色模式开始时间（分钟，0-59）
+    // 手动定时开始时间（分钟，0-59）
     var scheduleStartMinute: Int
-    // 深色模式结束时间（小时，0-23）
+    // 手动定时结束时间（小时，0-23）
     var scheduleEndHour: Int
-    // 深色模式结束时间（分钟，0-59）
+    // 手动定时结束时间（分钟，0-59）
     var scheduleEndMinute: Int
+    // 智能定时：上次成功定位的纬度
+    var sunLatitude: Double?
+    // 智能定时：上次成功定位的经度
+    var sunLongitude: Double?
+    // 智能定时：当日日出时间（小时，0-23）
+    var sunScheduleSunriseHour: Int
+    // 智能定时：当日日出时间（分钟，0-59）
+    var sunScheduleSunriseMinute: Int
+    // 智能定时：当日日落时间（小时，0-23）
+    var sunScheduleSunsetHour: Int
+    // 智能定时：当日日落时间（分钟，0-59）
+    var sunScheduleSunsetMinute: Int
+    // 智能定时：日出日落上次刷新时间
+    var sunScheduleUpdatedAt: Date?
+
+    // 低电量自动护眼开关
+    var lowBatteryEyeCareEnabled: Bool
+    // 低电量阈值（10 / 20 / 30）
+    var lowBatteryThreshold: Int
+    // 充电/电量恢复后是否自动恢复之前模式
+    var lowBatteryRestoreOnCharging: Bool
+    // 当前是否处于低电量接管状态
+    var lowBatteryModeActive: Bool
+
+    // Cookie 横幅自动隐藏（默认关闭，需用户主动开启）
+    var hideCookieBanners: Bool
+    // 每日护眼报告通知
+    var dailyEyeCareNotificationEnabled: Bool
+    var dailyEyeCareNotificationHour: Int
+    var dailyEyeCareNotificationMinute: Int
+    // 每周护眼报告通知
+    var weeklyEyeCareNotificationEnabled: Bool
+    // 1=周日 ... 7=周六（遵循 Calendar weekday）
+    var weeklyEyeCareNotificationWeekday: Int
+    var weeklyEyeCareNotificationHour: Int
+    var weeklyEyeCareNotificationMinute: Int
 
     // 默认初始化（新用户首次启动时使用）
     init() {
         self.mode = .auto
-        self.defaultThemeId = "theme_002"   // 默认使用深灰主题
+        self.defaultThemeId = "theme_002"
         self.dimImages = true
         self.ignoreNativeDarkMode = false
         self.performanceMode = false
         self.extensionEnabled = true
         self.appLanguage = .system
+
         self.scheduleEnabled = false
-        self.scheduleStartHour = 22    // 默认晚上 22:00 开启
+        self.scheduleTriggerSource = .manual
+        self.scheduleStartHour = 22
         self.scheduleStartMinute = 0
-        self.scheduleEndHour = 7       // 默认早上 7:00 结束
+        self.scheduleEndHour = 7
         self.scheduleEndMinute = 0
+        self.sunLatitude = nil
+        self.sunLongitude = nil
+        self.sunScheduleSunriseHour = 7
+        self.sunScheduleSunriseMinute = 0
+        self.sunScheduleSunsetHour = 18
+        self.sunScheduleSunsetMinute = 0
+        self.sunScheduleUpdatedAt = nil
+
+        self.lowBatteryEyeCareEnabled = false
+        self.lowBatteryThreshold = 20
+        self.lowBatteryRestoreOnCharging = true
+        self.lowBatteryModeActive = false
+
+        self.hideCookieBanners = false
+        self.dailyEyeCareNotificationEnabled = false
+        self.dailyEyeCareNotificationHour = 21
+        self.dailyEyeCareNotificationMinute = 30
+        self.weeklyEyeCareNotificationEnabled = false
+        self.weeklyEyeCareNotificationWeekday = 2
+        self.weeklyEyeCareNotificationHour = 20
+        self.weeklyEyeCareNotificationMinute = 0
     }
 
     private enum CodingKeys: String, CodingKey {
@@ -60,10 +122,30 @@ struct GlobalConfig: Codable, Equatable {
         case extensionEnabled
         case appLanguage
         case scheduleEnabled
+        case scheduleTriggerSource
         case scheduleStartHour
         case scheduleStartMinute
         case scheduleEndHour
         case scheduleEndMinute
+        case sunLatitude
+        case sunLongitude
+        case sunScheduleSunriseHour
+        case sunScheduleSunriseMinute
+        case sunScheduleSunsetHour
+        case sunScheduleSunsetMinute
+        case sunScheduleUpdatedAt
+        case lowBatteryEyeCareEnabled
+        case lowBatteryThreshold
+        case lowBatteryRestoreOnCharging
+        case lowBatteryModeActive
+        case hideCookieBanners
+        case dailyEyeCareNotificationEnabled
+        case dailyEyeCareNotificationHour
+        case dailyEyeCareNotificationMinute
+        case weeklyEyeCareNotificationEnabled
+        case weeklyEyeCareNotificationWeekday
+        case weeklyEyeCareNotificationHour
+        case weeklyEyeCareNotificationMinute
     }
 
     init(from decoder: Decoder) throws {
@@ -75,11 +157,46 @@ struct GlobalConfig: Codable, Equatable {
         self.performanceMode = try container.decodeIfPresent(Bool.self, forKey: .performanceMode) ?? false
         self.extensionEnabled = try container.decodeIfPresent(Bool.self, forKey: .extensionEnabled) ?? true
         self.appLanguage = try container.decodeIfPresent(AppLanguageOption.self, forKey: .appLanguage) ?? .system
+
         self.scheduleEnabled = try container.decodeIfPresent(Bool.self, forKey: .scheduleEnabled) ?? false
-        self.scheduleStartHour = try container.decodeIfPresent(Int.self, forKey: .scheduleStartHour) ?? 22
-        self.scheduleStartMinute = try container.decodeIfPresent(Int.self, forKey: .scheduleStartMinute) ?? 0
-        self.scheduleEndHour = try container.decodeIfPresent(Int.self, forKey: .scheduleEndHour) ?? 7
-        self.scheduleEndMinute = try container.decodeIfPresent(Int.self, forKey: .scheduleEndMinute) ?? 0
+        self.scheduleTriggerSource = try container.decodeIfPresent(ScheduleTriggerSource.self, forKey: .scheduleTriggerSource) ?? .manual
+        self.scheduleStartHour = Self.clampHour(try container.decodeIfPresent(Int.self, forKey: .scheduleStartHour) ?? 22)
+        self.scheduleStartMinute = Self.clampMinute(try container.decodeIfPresent(Int.self, forKey: .scheduleStartMinute) ?? 0)
+        self.scheduleEndHour = Self.clampHour(try container.decodeIfPresent(Int.self, forKey: .scheduleEndHour) ?? 7)
+        self.scheduleEndMinute = Self.clampMinute(try container.decodeIfPresent(Int.self, forKey: .scheduleEndMinute) ?? 0)
+
+        self.sunLatitude = try container.decodeIfPresent(Double.self, forKey: .sunLatitude)
+        self.sunLongitude = try container.decodeIfPresent(Double.self, forKey: .sunLongitude)
+        self.sunScheduleSunriseHour = Self.clampHour(try container.decodeIfPresent(Int.self, forKey: .sunScheduleSunriseHour) ?? 7)
+        self.sunScheduleSunriseMinute = Self.clampMinute(try container.decodeIfPresent(Int.self, forKey: .sunScheduleSunriseMinute) ?? 0)
+        self.sunScheduleSunsetHour = Self.clampHour(try container.decodeIfPresent(Int.self, forKey: .sunScheduleSunsetHour) ?? 18)
+        self.sunScheduleSunsetMinute = Self.clampMinute(try container.decodeIfPresent(Int.self, forKey: .sunScheduleSunsetMinute) ?? 0)
+        self.sunScheduleUpdatedAt = try container.decodeIfPresent(Date.self, forKey: .sunScheduleUpdatedAt)
+
+        self.lowBatteryEyeCareEnabled = try container.decodeIfPresent(Bool.self, forKey: .lowBatteryEyeCareEnabled) ?? false
+        let rawThreshold = try container.decodeIfPresent(Int.self, forKey: .lowBatteryThreshold) ?? 20
+        self.lowBatteryThreshold = [10, 20, 30].contains(rawThreshold) ? rawThreshold : 20
+        self.lowBatteryRestoreOnCharging = try container.decodeIfPresent(Bool.self, forKey: .lowBatteryRestoreOnCharging) ?? true
+        self.lowBatteryModeActive = try container.decodeIfPresent(Bool.self, forKey: .lowBatteryModeActive) ?? false
+
+        self.hideCookieBanners = try container.decodeIfPresent(Bool.self, forKey: .hideCookieBanners) ?? false
+        self.dailyEyeCareNotificationEnabled = try container.decodeIfPresent(Bool.self, forKey: .dailyEyeCareNotificationEnabled) ?? false
+        self.dailyEyeCareNotificationHour = Self.clampHour(
+            try container.decodeIfPresent(Int.self, forKey: .dailyEyeCareNotificationHour) ?? 21
+        )
+        self.dailyEyeCareNotificationMinute = Self.clampMinute(
+            try container.decodeIfPresent(Int.self, forKey: .dailyEyeCareNotificationMinute) ?? 30
+        )
+        self.weeklyEyeCareNotificationEnabled = try container.decodeIfPresent(Bool.self, forKey: .weeklyEyeCareNotificationEnabled) ?? false
+        self.weeklyEyeCareNotificationWeekday = Self.clampWeekday(
+            try container.decodeIfPresent(Int.self, forKey: .weeklyEyeCareNotificationWeekday) ?? 2
+        )
+        self.weeklyEyeCareNotificationHour = Self.clampHour(
+            try container.decodeIfPresent(Int.self, forKey: .weeklyEyeCareNotificationHour) ?? 20
+        )
+        self.weeklyEyeCareNotificationMinute = Self.clampMinute(
+            try container.decodeIfPresent(Int.self, forKey: .weeklyEyeCareNotificationMinute) ?? 0
+        )
     }
 
     func encode(to encoder: Encoder) throws {
@@ -91,37 +208,109 @@ struct GlobalConfig: Codable, Equatable {
         try container.encode(performanceMode, forKey: .performanceMode)
         try container.encode(extensionEnabled, forKey: .extensionEnabled)
         try container.encode(appLanguage, forKey: .appLanguage)
+
         try container.encode(scheduleEnabled, forKey: .scheduleEnabled)
+        try container.encode(scheduleTriggerSource, forKey: .scheduleTriggerSource)
         try container.encode(scheduleStartHour, forKey: .scheduleStartHour)
         try container.encode(scheduleStartMinute, forKey: .scheduleStartMinute)
         try container.encode(scheduleEndHour, forKey: .scheduleEndHour)
         try container.encode(scheduleEndMinute, forKey: .scheduleEndMinute)
+        try container.encodeIfPresent(sunLatitude, forKey: .sunLatitude)
+        try container.encodeIfPresent(sunLongitude, forKey: .sunLongitude)
+        try container.encode(sunScheduleSunriseHour, forKey: .sunScheduleSunriseHour)
+        try container.encode(sunScheduleSunriseMinute, forKey: .sunScheduleSunriseMinute)
+        try container.encode(sunScheduleSunsetHour, forKey: .sunScheduleSunsetHour)
+        try container.encode(sunScheduleSunsetMinute, forKey: .sunScheduleSunsetMinute)
+        try container.encodeIfPresent(sunScheduleUpdatedAt, forKey: .sunScheduleUpdatedAt)
+
+        try container.encode(lowBatteryEyeCareEnabled, forKey: .lowBatteryEyeCareEnabled)
+        try container.encode(lowBatteryThreshold, forKey: .lowBatteryThreshold)
+        try container.encode(lowBatteryRestoreOnCharging, forKey: .lowBatteryRestoreOnCharging)
+        try container.encode(lowBatteryModeActive, forKey: .lowBatteryModeActive)
+
+        try container.encode(hideCookieBanners, forKey: .hideCookieBanners)
+        try container.encode(dailyEyeCareNotificationEnabled, forKey: .dailyEyeCareNotificationEnabled)
+        try container.encode(dailyEyeCareNotificationHour, forKey: .dailyEyeCareNotificationHour)
+        try container.encode(dailyEyeCareNotificationMinute, forKey: .dailyEyeCareNotificationMinute)
+        try container.encode(weeklyEyeCareNotificationEnabled, forKey: .weeklyEyeCareNotificationEnabled)
+        try container.encode(weeklyEyeCareNotificationWeekday, forKey: .weeklyEyeCareNotificationWeekday)
+        try container.encode(weeklyEyeCareNotificationHour, forKey: .weeklyEyeCareNotificationHour)
+        try container.encode(weeklyEyeCareNotificationMinute, forKey: .weeklyEyeCareNotificationMinute)
     }
 
     // MARK: - 定时模式辅助属性
 
-    /// 当前时间是否处于定时深色模式区间内
     var isInScheduledTime: Bool {
-        guard scheduleEnabled else { return false }
-        let now = Calendar.current.dateComponents([.hour, .minute], from: Date())
-        let currentMinutes = (now.hour ?? 0) * 60 + (now.minute ?? 0)
-        let startMinutes = scheduleStartHour * 60 + scheduleStartMinute
-        let endMinutes = scheduleEndHour * 60 + scheduleEndMinute
+        isInScheduledTime(at: Date())
+    }
 
-        if startMinutes < endMinutes {
-            // 同日区间，例如 08:00 - 20:00
-            return currentMinutes >= startMinutes && currentMinutes < endMinutes
-        } else {
-            // 跨午夜区间，例如 22:00 - 07:00（开始 > 结束）
-            return currentMinutes >= startMinutes || currentMinutes < endMinutes
+    func isInScheduledTime(at date: Date) -> Bool {
+        guard scheduleEnabled else { return false }
+        guard let range = activeScheduleRangeMinutes else { return false }
+
+        let now = Calendar.current.dateComponents([.hour, .minute], from: date)
+        let currentMinutes = (now.hour ?? 0) * 60 + (now.minute ?? 0)
+
+        if range.start < range.end {
+            return currentMinutes >= range.start && currentMinutes < range.end
+        }
+        return currentMinutes >= range.start || currentMinutes < range.end
+    }
+
+    var scheduleTimeDescription: String {
+        switch scheduleTriggerSource {
+        case .manual:
+            return String(
+                format: "%02d:%02d – %02d:%02d",
+                scheduleStartHour,
+                scheduleStartMinute,
+                scheduleEndHour,
+                scheduleEndMinute
+            )
+        case .system:
+            return "跟随系统深色模式"
+        case .sunsetSunrise:
+            return String(
+                format: "日落 %02d:%02d · 日出 %02d:%02d",
+                sunScheduleSunsetHour,
+                sunScheduleSunsetMinute,
+                sunScheduleSunriseHour,
+                sunScheduleSunriseMinute
+            )
         }
     }
 
-    /// 格式化时间显示，如 "22:00 - 07:00"
-    var scheduleTimeDescription: String {
-        String(format: "%02d:%02d – %02d:%02d",
-               scheduleStartHour, scheduleStartMinute,
-               scheduleEndHour, scheduleEndMinute)
+    var hasSunLocation: Bool {
+        sunLatitude != nil && sunLongitude != nil
+    }
+
+    private var activeScheduleRangeMinutes: (start: Int, end: Int)? {
+        switch scheduleTriggerSource {
+        case .manual:
+            return (
+                scheduleStartHour * 60 + scheduleStartMinute,
+                scheduleEndHour * 60 + scheduleEndMinute
+            )
+        case .system:
+            return nil
+        case .sunsetSunrise:
+            return (
+                sunScheduleSunsetHour * 60 + sunScheduleSunsetMinute,
+                sunScheduleSunriseHour * 60 + sunScheduleSunriseMinute
+            )
+        }
+    }
+
+    private static func clampHour(_ value: Int) -> Int {
+        min(max(value, 0), 23)
+    }
+
+    private static func clampMinute(_ value: Int) -> Int {
+        min(max(value, 0), 59)
+    }
+
+    private static func clampWeekday(_ value: Int) -> Int {
+        min(max(value, 1), 7)
     }
 }
 
@@ -158,13 +347,12 @@ enum AppLanguageOption: String, Codable, CaseIterable, Identifiable {
 // MARK: - 深色模式枚举
 
 enum DarkMode: String, Codable, CaseIterable, Identifiable {
-    case auto = "auto"  // 跟随系统 prefers-color-scheme
-    case on   = "on"    // 始终开启深色模式
-    case off  = "off"   // 始终关闭深色模式
+    case auto = "auto"
+    case on   = "on"
+    case off  = "off"
 
     var id: String { rawValue }
 
-    // 在 UI 中显示的名称 key
     var displayNameKey: String {
         switch self {
         case .auto: return "darkmode.option.auto"
@@ -173,7 +361,6 @@ enum DarkMode: String, Codable, CaseIterable, Identifiable {
         }
     }
 
-    // SF Symbols 图标名称
     var systemImageName: String {
         switch self {
         case .auto: return "circle.lefthalf.filled"
@@ -182,12 +369,41 @@ enum DarkMode: String, Codable, CaseIterable, Identifiable {
         }
     }
 
-    // 用于展示在 Dashboard 的简短说明 key
     var descriptionKey: String {
         switch self {
         case .auto: return "darkmode.desc.auto"
         case .on:   return "darkmode.desc.on"
         case .off:  return "darkmode.desc.off"
+        }
+    }
+}
+
+enum ScheduleTriggerSource: String, Codable, CaseIterable, Identifiable {
+    case manual
+    case system
+    case sunsetSunrise
+
+    var id: String { rawValue }
+
+    var displayName: String {
+        switch self {
+        case .manual:
+            return "手动设时间"
+        case .system:
+            return "跟随系统深色"
+        case .sunsetSunrise:
+            return "跟随当地日落日出"
+        }
+    }
+
+    var subtitle: String {
+        switch self {
+        case .manual:
+            return "固定时段自动切换"
+        case .system:
+            return "与系统深色模式同步"
+        case .sunsetSunrise:
+            return "按当日日落/日出自动变化"
         }
     }
 }

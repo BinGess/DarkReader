@@ -51,6 +51,11 @@
   let originalPushState = null;  // 保存原始 history.pushState
   let isRefreshingTheme = false; // 防止 refreshThemeFromApp 并发执行
   let themeRefreshTimer = null;  // 定时轮询主题变化的 timer handle
+  let eyeCareUsageTimer = null;  // 护眼统计上报计时器
+  let eyeCareLastTickAt = 0;     // 护眼统计上次计时点
+  let pendingEyeCareSeconds = 0; // 待上报累计时长
+
+  const EYECARE_REPORT_INTERVAL_MS = 30000;
 
   // ============================================================
   // 工具函数：颜色解析与转换
@@ -423,7 +428,11 @@ svg {
     // 注入专注阅读模式样式
     applyFocusMode();
 
+    // 按配置隐藏 Cookie/GDPR 横幅（仅 CSS，不模拟点击）
+    applyCookieBannerHiding();
+
     isActive = true;
+    startEyeCareUsageTracker();
   }
 
   /**
@@ -500,10 +509,42 @@ main, article, [role="main"],
     (document.head || document.documentElement).appendChild(focusStyle);
   }
 
+  function applyCookieBannerHiding() {
+    removeStyleById('__dr_cookie_hide__');
+    if (!currentConfig?.hideCookieBanners) return;
+
+    const cookieSelectors = [
+      '[id*="cookie"]',
+      '[class*="cookie-banner"]',
+      '[id*="gdpr"]',
+      '[class*="gdpr"]',
+      '[id*="consent"]',
+      '[class*="consent-banner"]',
+      '#onetrust-consent-sdk',
+      '.cc-window',
+      '#cookiebanner',
+      '.cookie-notice',
+      '[class*="cookie-tip"]',
+      '[id*="cookie-tip"]'
+    ];
+
+    const hideStyle = document.createElement('style');
+    hideStyle.id = '__dr_cookie_hide__';
+    hideStyle.textContent = `
+${cookieSelectors.join(',\n')} {
+  display: none !important;
+  visibility: hidden !important;
+  pointer-events: none !important;
+}
+`;
+    (document.head || document.documentElement).appendChild(hideStyle);
+  }
+
   /** 移除所有 DarkReader 注入的样式，恢复网页原始外观 */
   function removeAllStyles() {
-    ['__dr_flash__', '__dr_full__', '__dr_filter__', '__dr_focus__'].forEach(removeStyleById);
+    ['__dr_flash__', '__dr_full__', '__dr_filter__', '__dr_focus__', '__dr_cookie_hide__'].forEach(removeStyleById);
     isActive = false;
+    stopEyeCareUsageTracker(true);
   }
 
   function removeStyleById(id) {
@@ -535,6 +576,7 @@ main, article, [role="main"],
 
     // 降级默认值
     currentTheme = {
+      id: 'theme_002',
       backgroundColor: FALLBACK_BG,
       textColor: FALLBACK_TEXT,
       secondaryTextColor: '#999999',
@@ -542,9 +584,29 @@ main, article, [role="main"],
       borderColor: '#444444',
       imageBrightness: 0.75,
       imageGrayscale: 0.0,
+      category: 'reading',
+      eyeCareScore: 4,
+      warmthLevel: 3,
       dimImages: true
     };
-    currentConfig = { mode: 'auto', dimImages: true, ignoreNativeDarkMode: false, siteRules: {} };
+    currentConfig = {
+      mode: 'auto',
+      defaultThemeId: 'theme_002',
+      dimImages: true,
+      ignoreNativeDarkMode: false,
+      scheduleEnabled: false,
+      scheduleTriggerSource: 'manual',
+      scheduleStartHour: 22,
+      scheduleStartMinute: 0,
+      scheduleEndHour: 7,
+      scheduleEndMinute: 0,
+      sunScheduleSunriseHour: 7,
+      sunScheduleSunriseMinute: 0,
+      sunScheduleSunsetHour: 18,
+      sunScheduleSunsetMinute: 0,
+      hideCookieBanners: false,
+      siteRules: {}
+    };
     return false;
   }
 
@@ -569,6 +631,10 @@ main, article, [role="main"],
 
     // 定时模式（优先于 auto 的系统跟随）
     if (currentConfig.scheduleEnabled) {
+      const triggerSource = currentConfig.scheduleTriggerSource || 'manual';
+      if (triggerSource === 'system') {
+        return window.matchMedia('(prefers-color-scheme: dark)').matches;
+      }
       return isInScheduledTime(currentConfig);
     }
 
@@ -583,8 +649,14 @@ main, article, [role="main"],
   function isInScheduledTime(config) {
     const now = new Date();
     const currentMinutes = now.getHours() * 60 + now.getMinutes();
-    const startMinutes = (config.scheduleStartHour || 22) * 60 + (config.scheduleStartMinute || 0);
-    const endMinutes = (config.scheduleEndHour || 7) * 60 + (config.scheduleEndMinute || 0);
+    const triggerSource = config.scheduleTriggerSource || 'manual';
+
+    const startMinutes = triggerSource === 'sunsetSunrise'
+      ? (config.sunScheduleSunsetHour || 18) * 60 + (config.sunScheduleSunsetMinute || 0)
+      : (config.scheduleStartHour || 22) * 60 + (config.scheduleStartMinute || 0);
+    const endMinutes = triggerSource === 'sunsetSunrise'
+      ? (config.sunScheduleSunriseHour || 7) * 60 + (config.sunScheduleSunriseMinute || 0)
+      : (config.scheduleEndHour || 7) * 60 + (config.scheduleEndMinute || 0);
 
     if (startMinutes < endMinutes) {
       // 同日区间，例如 08:00 - 20:00
@@ -599,6 +671,61 @@ main, article, [role="main"],
   function currentDomain() {
     const parts = window.location.hostname.split('.');
     return parts.length > 2 ? parts.slice(-2).join('.') : window.location.hostname;
+  }
+
+  // ============================================================
+  // 护眼时长统计上报（每 30 秒）
+  // ============================================================
+
+  function startEyeCareUsageTracker() {
+    if (eyeCareUsageTimer !== null) return;
+    eyeCareLastTickAt = Date.now();
+    eyeCareUsageTimer = setInterval(() => {
+      tickEyeCareUsage(false);
+    }, EYECARE_REPORT_INTERVAL_MS);
+  }
+
+  function stopEyeCareUsageTracker(flush = false) {
+    if (eyeCareUsageTimer !== null) {
+      clearInterval(eyeCareUsageTimer);
+      eyeCareUsageTimer = null;
+    }
+    tickEyeCareUsage(!!flush);
+    eyeCareLastTickAt = 0;
+  }
+
+  function tickEyeCareUsage(forceFlush) {
+    const now = Date.now();
+    if (eyeCareLastTickAt <= 0) {
+      eyeCareLastTickAt = now;
+      return;
+    }
+
+    const elapsed = Math.max((now - eyeCareLastTickAt) / 1000, 0);
+    eyeCareLastTickAt = now;
+
+    if (isActive && !isPaused && document.visibilityState === 'visible') {
+      pendingEyeCareSeconds += elapsed;
+    }
+
+    if (pendingEyeCareSeconds >= 1 && (forceFlush || pendingEyeCareSeconds >= 30)) {
+      reportEyeCareUsage(Math.round(pendingEyeCareSeconds));
+      pendingEyeCareSeconds = 0;
+    }
+  }
+
+  function reportEyeCareUsage(durationSeconds) {
+    if (!durationSeconds || durationSeconds <= 0) return;
+    try {
+      browser.runtime.sendMessage({
+        action: 'reportEyeCareUsage',
+        domain: currentDomain(),
+        durationSeconds,
+        themeId: currentTheme?.id || currentConfig?.siteThemeId || currentConfig?.defaultThemeId || ''
+      });
+    } catch (_) {
+      // 统计失败不影响主流程
+    }
   }
 
   // ============================================================
@@ -778,8 +905,10 @@ main, article, [role="main"],
       if (document.visibilityState === 'visible') {
         refreshThemeFromApp();   // 立即尝试一次
         startThemePolling();     // 确保轮询处于运行状态
+        if (isActive && !isPaused) startEyeCareUsageTracker();
       } else {
         stopThemePolling();      // 页面隐藏时停止轮询，节省资源
+        tickEyeCareUsage(true);
       }
     });
 
@@ -788,6 +917,7 @@ main, article, [role="main"],
       if (isActive && !isPaused) {
         refreshThemeFromApp();
         startThemePolling();
+        startEyeCareUsageTracker();
       }
     });
 
@@ -840,6 +970,7 @@ main, article, [role="main"],
 
       const newTheme = result.theme;
       const newConfig = result.config;
+      const prevConfig = currentConfig || {};
 
       // 用背景色 + 文字色双重比对，判断主题是否真正发生变化
       // 避免无变化时重复注入（会导致轻微样式闪烁）
@@ -849,18 +980,24 @@ main, article, [role="main"],
 
       // 检查站点精调参数是否变化
       const filterChanged =
-        (newConfig?.siteBrightness ?? 1.0) !== (currentConfig?.siteBrightness ?? 1.0) ||
-        (newConfig?.siteContrast ?? 1.0) !== (currentConfig?.siteContrast ?? 1.0) ||
-        (newConfig?.siteFocusMode ?? false) !== (currentConfig?.siteFocusMode ?? false);
+        (newConfig?.siteBrightness ?? 1.0) !== (prevConfig.siteBrightness ?? 1.0) ||
+        (newConfig?.siteContrast ?? 1.0) !== (prevConfig.siteContrast ?? 1.0) ||
+        (newConfig?.siteFocusMode ?? false) !== (prevConfig.siteFocusMode ?? false);
+
+      const cookieSettingChanged =
+        (newConfig?.hideCookieBanners ?? false) !== (prevConfig.hideCookieBanners ?? false);
+
+      currentConfig = newConfig || currentConfig;
 
       if (themeChanged) {
         currentTheme = newTheme;
         injectFullStyle(currentTheme);
       } else if (filterChanged) {
         // 只更新滤镜和专注模式，不重注入整个深色样式
-        currentConfig = newConfig;
         applyPageFilter();
         applyFocusMode();
+      } else if (cookieSettingChanged) {
+        applyCookieBannerHiding();
       }
 
     } catch (_) {
@@ -965,6 +1102,11 @@ main, article, [role="main"],
       // ★ 监听页面可见性：从主 App 切回 Safari 时自动同步最新主题
       //   解决"App 改完主题→回到浏览器→样式未更新"的问题
       setupVisibilitySync();
+
+      // 页面离开前尽量冲刷一次统计数据
+      window.addEventListener('pagehide', () => {
+        stopEyeCareUsageTracker(true);
+      });
 
     } catch (e) {
       // 错误降级：保留防闪白样式，记录日志

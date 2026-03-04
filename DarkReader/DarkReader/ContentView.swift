@@ -47,7 +47,9 @@ struct ContentView: View {
 }
 
 #Preview {
+    let manager = SharedDataManager.shared
     ContentView()
-        .environmentObject(SharedDataManager.shared)
+        .environmentObject(manager)
+        .environmentObject(EyeCareNotificationManager(dataManager: manager))
         .environmentObject(AppNavigationState())
 }

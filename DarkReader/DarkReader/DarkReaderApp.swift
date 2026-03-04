@@ -7,21 +7,141 @@
 
 import SwiftUI
 import Combine
+#if canImport(UIKit)
+import UIKit
+#endif
 
 final class AppNavigationState: ObservableObject {
     @Published var selectedTab: Int = 0
 }
 
+#if canImport(UIKit)
+final class BatteryEyeCareManager: ObservableObject {
+    private let dataManager: SharedDataManager
+    private var restoreMode: DarkMode?
+    private var restoreThemeId: String?
+    private var isMonitoring = false
+
+    init(dataManager: SharedDataManager) {
+        self.dataManager = dataManager
+    }
+
+    func startMonitoring() {
+        guard !isMonitoring else { return }
+        isMonitoring = true
+        UIDevice.current.isBatteryMonitoringEnabled = true
+        NotificationCenter.default.addObserver(
+            self,
+            selector: #selector(handleBatteryEvent),
+            name: UIDevice.batteryLevelDidChangeNotification,
+            object: nil
+        )
+        NotificationCenter.default.addObserver(
+            self,
+            selector: #selector(handleBatteryEvent),
+            name: UIDevice.batteryStateDidChangeNotification,
+            object: nil
+        )
+        evaluateBatteryState()
+    }
+
+    deinit {
+        NotificationCenter.default.removeObserver(self)
+    }
+
+    @objc private func handleBatteryEvent() {
+        evaluateBatteryState()
+    }
+
+    private func evaluateBatteryState() {
+        var config = dataManager.globalConfig
+        guard config.lowBatteryEyeCareEnabled else {
+            if config.lowBatteryModeActive {
+                config.lowBatteryModeActive = false
+                dataManager.globalConfig = config
+                dataManager.saveConfig()
+            }
+            return
+        }
+
+        let batteryLevel = UIDevice.current.batteryLevel
+        let batteryState = UIDevice.current.batteryState
+        guard batteryLevel >= 0 else { return }
+
+        let threshold = Float(config.lowBatteryThreshold) / 100.0
+        let shouldActivate = batteryLevel <= threshold && batteryState != .charging && batteryState != .full
+        if shouldActivate {
+            activateLowBatteryModeIfNeeded()
+            return
+        }
+
+        if config.lowBatteryModeActive && (batteryState == .charging || batteryLevel > threshold + 0.03) {
+            if config.lowBatteryRestoreOnCharging {
+                restorePreviousModeIfPossible()
+            } else {
+                config.lowBatteryModeActive = false
+                dataManager.globalConfig = config
+                dataManager.saveConfig()
+            }
+        }
+    }
+
+    private func activateLowBatteryModeIfNeeded() {
+        var config = dataManager.globalConfig
+        guard !config.lowBatteryModeActive else { return }
+
+        restoreMode = config.mode
+        restoreThemeId = config.defaultThemeId
+        config.mode = .on
+        config.defaultThemeId = "theme_001"
+        config.lowBatteryModeActive = true
+        dataManager.globalConfig = config
+        dataManager.saveConfig()
+    }
+
+    private func restorePreviousModeIfPossible() {
+        var config = dataManager.globalConfig
+        guard config.lowBatteryModeActive else { return }
+
+        if let mode = restoreMode {
+            config.mode = mode
+        }
+        if let themeId = restoreThemeId {
+            config.defaultThemeId = themeId
+        }
+        config.lowBatteryModeActive = false
+        dataManager.globalConfig = config
+        dataManager.saveConfig()
+
+        restoreMode = nil
+        restoreThemeId = nil
+    }
+}
+#endif
+
 @main
 struct DarkReaderApp: App {
     // 共享数据管理器（全局单例，注入所有视图）
-    @StateObject private var dataManager = SharedDataManager.shared
+    @StateObject private var dataManager: SharedDataManager
     @StateObject private var iCloudSync = iCloudSyncManager.shared
     @StateObject private var appNavigation = AppNavigationState()
+    @StateObject private var notificationManager: EyeCareNotificationManager
+#if canImport(UIKit)
+    @StateObject private var batteryManager: BatteryEyeCareManager
+#endif
     @State private var showSplash = true
 
     // 判断是否为首次启动（需要展示 Onboarding）
     @AppStorage("hasCompletedOnboarding") private var hasCompletedOnboarding = false
+
+    init() {
+        let manager = SharedDataManager.shared
+        _dataManager = StateObject(wrappedValue: manager)
+        _notificationManager = StateObject(wrappedValue: EyeCareNotificationManager(dataManager: manager))
+#if canImport(UIKit)
+        _batteryManager = StateObject(wrappedValue: BatteryEyeCareManager(dataManager: manager))
+#endif
+    }
 
     var body: some Scene {
         WindowGroup {
@@ -32,9 +152,11 @@ struct DarkReaderApp: App {
                     if hasCompletedOnboarding {
                         ContentView()
                             .environmentObject(dataManager)
+                            .environmentObject(notificationManager)
                     } else {
                         OnboardingView(hasCompletedOnboarding: $hasCompletedOnboarding)
                             .environmentObject(dataManager)
+                            .environmentObject(notificationManager)
                     }
                 }
             }
@@ -44,6 +166,11 @@ struct DarkReaderApp: App {
                 handleDeepLink(url)
             }
             .onAppear {
+#if canImport(UIKit)
+                batteryManager.startMonitoring()
+#endif
+                notificationManager.start()
+                dataManager.refreshSunScheduleIfNeeded()
                 guard showSplash else { return }
                 DispatchQueue.main.asyncAfter(deadline: .now() + 1.45) {
                     withAnimation(.easeOut(duration: 0.28)) {

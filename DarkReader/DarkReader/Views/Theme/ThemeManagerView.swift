@@ -259,6 +259,7 @@ struct ThemeManagerView: View {
             newId = DarkTheme.generateCustomId()
         }
 
+        let mappedCategory = mappedThemeCategory(from: preset.category)
         let theme = DarkTheme(
             id: newId,
             name: themeName,
@@ -268,10 +269,28 @@ struct ThemeManagerView: View {
             linkColor: preset.linkColor,
             borderColor: preset.borderColor,
             isBuiltin: false,
+            category: mappedCategory,
+            eyeCareScore: mappedCategory.typicalEyeCareScore,
+            warmthLevel: mappedCategory.typicalWarmthLevel,
             createdAt: Date(),
             updatedAt: Date()
         )
         dataManager.addCustomTheme(theme)
+    }
+
+    private func mappedThemeCategory(from rawCategory: String) -> ThemeCategory {
+        switch rawCategory {
+        case "默认主题", "六色", "作者作品":
+            return .reading
+        case "颜色情绪":
+            return .nature
+        case "果味满满":
+            return .warmLight
+        case "其他":
+            return .eyeCare
+        default:
+            return .reading
+        }
     }
 
     private func sectionHeader(_ title: String) -> some View {
@@ -323,6 +342,9 @@ struct ThemeCard: View {
                         Text(theme.localizedDisplayName(language: appLanguage))
                             .font(SustainabilityTypography.bodyStrong)
                             .lineLimit(1)
+                        Text(eyeCareBadgeText)
+                            .font(SustainabilityTypography.caption)
+                            .foregroundColor(SustainabilityPalette.primary)
                         Text(LocalizedStringKey(isDefault ? "当前默认主题" : "点击可设为默认"))
                             .font(SustainabilityTypography.caption)
                             .foregroundColor(isDefault ? SustainabilityPalette.primary : .secondary)
@@ -376,6 +398,12 @@ struct ThemeCard: View {
                 }
             }
         }
+    }
+
+    private var eyeCareBadgeText: String {
+        let stars = String(repeating: "★", count: max(theme.eyeCareScore, 1))
+        let blanks = String(repeating: "☆", count: max(5 - theme.eyeCareScore, 0))
+        return "🟢 护眼 \(stars)\(blanks)"
     }
 }
 

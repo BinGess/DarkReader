@@ -8,6 +8,8 @@
 
 /* Begin PBXBuildFile section */
 		2B64FA6A2F568FE40052264B /* DarkReaderExtension.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = 2B64FA522F568FE40052264B /* DarkReaderExtension.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
+		A9F697FA4DD768250E5306D4 /* DarkReaderWidget.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = FB4F3094848B57984E4A561E /* DarkReaderWidget.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
+		F6EB3B99185D2169F3769B45 /* DarkReaderWidget.swift in Sources */ = {isa = PBXBuildFile; fileRef = 633E74600263CF94AFC95B07 /* DarkReaderWidget.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -32,6 +34,13 @@
 			remoteGlobalIDString = 2B64FA512F568FE40052264B;
 			remoteInfo = DarkReaderExtension;
 		};
+		AB9A4B437519E110767AEFC5 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 2B64F9CA2F568E9D0052264B /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = F93B9B9EECE797290F34A041;
+			remoteInfo = DarkReaderWidget;
+		};
 /* End PBXContainerItemProxy section */
 
 /* Begin PBXCopyFilesBuildPhase section */
@@ -42,6 +51,7 @@
 			dstSubfolderSpec = 13;
 			files = (
 				2B64FA6A2F568FE40052264B /* DarkReaderExtension.appex in Embed Foundation Extensions */,
+				A9F697FA4DD768250E5306D4 /* DarkReaderWidget.appex in Embed Foundation Extensions */,
 			);
 			name = "Embed Foundation Extensions";
 			runOnlyForDeploymentPostprocessing = 0;
@@ -53,6 +63,10 @@
 		2B64F9DF2F568EA10052264B /* DarkReaderTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = DarkReaderTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		2B64F9E92F568EA10052264B /* DarkReaderUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = DarkReaderUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		2B64FA522F568FE40052264B /* DarkReaderExtension.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = DarkReaderExtension.appex; sourceTree = BUILT_PRODUCTS_DIR; };
+		633E74600263CF94AFC95B07 /* DarkReaderWidget.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = DarkReaderWidget.swift; sourceTree = "<group>"; };
+		CEAEDC64C161CE473C0A4B20 /* DarkReaderWidget.entitlements */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.plist.entitlements; path = DarkReaderWidget.entitlements; sourceTree = "<group>"; };
+		F6C59DDFA00E25611359043D /* Info.plist */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
+		FB4F3094848B57984E4A561E /* DarkReaderWidget.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = DarkReaderWidget.appex; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
@@ -83,11 +97,15 @@
 		};
 		2B64F9E22F568EA10052264B /* DarkReaderTests */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
+			exceptions = (
+			);
 			path = DarkReaderTests;
 			sourceTree = "<group>";
 		};
 		2B64F9EC2F568EA10052264B /* DarkReaderUITests */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
+			exceptions = (
+			);
 			path = DarkReaderUITests;
 			sourceTree = "<group>";
 		};
@@ -130,9 +148,27 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		3C09CDB5C65AA96D1FC82637 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
+		0071BE099DF321F2074ABEAE /* DarkReaderWidget */ = {
+			isa = PBXGroup;
+			children = (
+				633E74600263CF94AFC95B07 /* DarkReaderWidget.swift */,
+				F6C59DDFA00E25611359043D /* Info.plist */,
+				CEAEDC64C161CE473C0A4B20 /* DarkReaderWidget.entitlements */,
+			);
+			name = DarkReaderWidget;
+			path = DarkReaderWidget;
+			sourceTree = "<group>";
+		};
 		2B64F9C92F568E9D0052264B = {
 			isa = PBXGroup;
 			children = (
@@ -141,6 +177,7 @@
 				2B64F9EC2F568EA10052264B /* DarkReaderUITests */,
 				2B64FA532F568FE40052264B /* DarkReaderExtension */,
 				2B64F9D32F568E9E0052264B /* Products */,
+				0071BE099DF321F2074ABEAE /* DarkReaderWidget */,
 			);
 			sourceTree = "<group>";
 		};
@@ -151,6 +188,7 @@
 				2B64F9DF2F568EA10052264B /* DarkReaderTests.xctest */,
 				2B64F9E92F568EA10052264B /* DarkReaderUITests.xctest */,
 				2B64FA522F568FE40052264B /* DarkReaderExtension.appex */,
+				FB4F3094848B57984E4A561E /* DarkReaderWidget.appex */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -171,13 +209,12 @@
 			);
 			dependencies = (
 				2B64FA692F568FE40052264B /* PBXTargetDependency */,
+				BAA1823D38CDE2AB7CE1FFA8 /* PBXTargetDependency */,
 			);
 			fileSystemSynchronizedGroups = (
 				2B64F9D42F568E9E0052264B /* DarkReader */,
 			);
 			name = DarkReader;
-			packageProductDependencies = (
-			);
 			productName = DarkReader;
 			productReference = 2B64F9D22F568E9E0052264B /* DarkReader.app */;
 			productType = "com.apple.product-type.application";
@@ -199,8 +236,6 @@
 				2B64F9E22F568EA10052264B /* DarkReaderTests */,
 			);
 			name = DarkReaderTests;
-			packageProductDependencies = (
-			);
 			productName = DarkReaderTests;
 			productReference = 2B64F9DF2F568EA10052264B /* DarkReaderTests.xctest */;
 			productType = "com.apple.product-type.bundle.unit-test";
@@ -222,8 +257,6 @@
 				2B64F9EC2F568EA10052264B /* DarkReaderUITests */,
 			);
 			name = DarkReaderUITests;
-			packageProductDependencies = (
-			);
 			productName = DarkReaderUITests;
 			productReference = 2B64F9E92F568EA10052264B /* DarkReaderUITests.xctest */;
 			productType = "com.apple.product-type.bundle.ui-testing";
@@ -244,10 +277,25 @@
 				2B64FA532F568FE40052264B /* DarkReaderExtension */,
 			);
 			name = DarkReaderExtension;
-			packageProductDependencies = (
-			);
 			productName = DarkReaderExtension;
 			productReference = 2B64FA522F568FE40052264B /* DarkReaderExtension.appex */;
+			productType = "com.apple.product-type.app-extension";
+		};
+		F93B9B9EECE797290F34A041 /* DarkReaderWidget */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 1D947C1A1B834E4CB37FE973 /* Build configuration list for PBXNativeTarget "DarkReaderWidget" */;
+			buildPhases = (
+				FBC80BA582495E4F1E185B7D /* Sources */,
+				3C09CDB5C65AA96D1FC82637 /* Frameworks */,
+				F9E8C70EA6B14BAE2550BFCF /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = DarkReaderWidget;
+			productName = DarkReaderWidget;
+			productReference = FB4F3094848B57984E4A561E /* DarkReaderWidget.appex */;
 			productType = "com.apple.product-type.app-extension";
 		};
 /* End PBXNativeTarget section */
@@ -295,6 +343,7 @@
 				2B64F9DE2F568EA10052264B /* DarkReaderTests */,
 				2B64F9E82F568EA10052264B /* DarkReaderUITests */,
 				2B64FA512F568FE40052264B /* DarkReaderExtension */,
+				F93B9B9EECE797290F34A041 /* DarkReaderWidget */,
 			);
 		};
 /* End PBXProject section */
@@ -322,6 +371,13 @@
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 		2B64FA502F568FE40052264B /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		F9E8C70EA6B14BAE2550BFCF /* Resources */ = {
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
@@ -359,6 +415,14 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		FBC80BA582495E4F1E185B7D /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				F6EB3B99185D2169F3769B45 /* DarkReaderWidget.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXSourcesBuildPhase section */
 
 /* Begin PBXTargetDependency section */
@@ -376,6 +440,12 @@
 			isa = PBXTargetDependency;
 			target = 2B64FA512F568FE40052264B /* DarkReaderExtension */;
 			targetProxy = 2B64FA682F568FE40052264B /* PBXContainerItemProxy */;
+		};
+		BAA1823D38CDE2AB7CE1FFA8 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			name = DarkReaderWidget;
+			target = F93B9B9EECE797290F34A041 /* DarkReaderWidget */;
+			targetProxy = AB9A4B437519E110767AEFC5 /* PBXContainerItemProxy */;
 		};
 /* End PBXTargetDependency section */
 
@@ -761,9 +831,83 @@
 			};
 			name = Release;
 		};
+		C6BDA3951F6241D77ADA6528 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				APPLICATION_EXTENSION_API_ONLY = YES;
+				CLANG_ENABLE_OBJC_WEAK = NO;
+				CODE_SIGN_ENTITLEMENTS = DarkReaderWidget/DarkReaderWidget.entitlements;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = 742UUCBN9G;
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = DarkReaderWidget/Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = "护眼统计";
+				IPHONEOS_DEPLOYMENT_TARGET = 15.6;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.timmy.darkreader.DarkReader.DarkReaderWidget;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = iphoneos;
+				SKIP_INSTALL = YES;
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Debug;
+		};
+		CEBB41D2953429ED4FA7430A /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				APPLICATION_EXTENSION_API_ONLY = YES;
+				CLANG_ENABLE_OBJC_WEAK = NO;
+				CODE_SIGN_ENTITLEMENTS = DarkReaderWidget/DarkReaderWidget.entitlements;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = 742UUCBN9G;
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = DarkReaderWidget/Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = "护眼统计";
+				IPHONEOS_DEPLOYMENT_TARGET = 15.6;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.timmy.darkreader.DarkReader.DarkReaderWidget;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = iphoneos;
+				SKIP_INSTALL = YES;
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				VALIDATE_PRODUCT = YES;
+			};
+			name = Release;
+		};
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
+		1D947C1A1B834E4CB37FE973 /* Build configuration list for PBXNativeTarget "DarkReaderWidget" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				CEBB41D2953429ED4FA7430A /* Release */,
+				C6BDA3951F6241D77ADA6528 /* Debug */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
 		2B64F9CD2F568E9E0052264B /* Build configuration list for PBXProject "DarkReader" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (

@@ -7,9 +7,11 @@
 
 import SwiftUI
 import StoreKit
+import UserNotifications
 
 struct SettingsView: View {
     @EnvironmentObject var dataManager: SharedDataManager
+    @EnvironmentObject var notificationManager: EyeCareNotificationManager
     @StateObject private var iCloudSync = iCloudSyncManager.shared
     @AppStorage("hasCompletedOnboarding") private var hasCompletedOnboarding = false
     @AppStorage("onboardingStartFromStepOne") private var onboardingStartFromStepOne = false
@@ -29,6 +31,7 @@ struct SettingsView: View {
                 ScrollView {
                     VStack(spacing: 12) {
                         syncCard
+                        eyeCareNotificationCard
                         guideCard
                         dataCard
                         aboutCard
@@ -145,6 +148,116 @@ struct SettingsView: View {
             return ("icloud.slash.fill", "iCloud 不可用", SustainabilityPalette.warm)
         case .failed:
             return ("exclamationmark.triangle.fill", "同步失败", SustainabilityPalette.danger)
+        }
+    }
+
+    private var eyeCareNotificationCard: some View {
+        SustainabilityCard {
+            VStack(alignment: .leading, spacing: 12) {
+                settingsSectionHeader("护眼报告通知", subtitle: "每日/每周自动提醒查看护眼数据")
+
+                Toggle(isOn: $dataManager.globalConfig.dailyEyeCareNotificationEnabled) {
+                    HStack(alignment: .top, spacing: 10) {
+                        Image(systemName: "calendar.badge.clock")
+                            .foregroundColor(SustainabilityPalette.cta)
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text("每日护眼报告")
+                                .font(SustainabilityTypography.bodyStrong)
+                            Text("按固定时间推送今日护眼时长与蓝光估算。")
+                                .font(SustainabilityTypography.caption)
+                                .foregroundColor(.secondary)
+                        }
+                    }
+                }
+                .sustainabilityInteractiveRow()
+                .tint(SustainabilityPalette.primary)
+                .onChange(of: dataManager.globalConfig.dailyEyeCareNotificationEnabled) { _ in
+                    saveConfigAndReschedule()
+                }
+
+                if dataManager.globalConfig.dailyEyeCareNotificationEnabled {
+                    notificationTimeRow(
+                        title: "每日推送时间",
+                        hour: $dataManager.globalConfig.dailyEyeCareNotificationHour,
+                        minute: $dataManager.globalConfig.dailyEyeCareNotificationMinute
+                    )
+                    .onChange(of: dataManager.globalConfig.dailyEyeCareNotificationHour) { _ in
+                        saveConfigAndReschedule()
+                    }
+                    .onChange(of: dataManager.globalConfig.dailyEyeCareNotificationMinute) { _ in
+                        saveConfigAndReschedule()
+                    }
+                }
+
+                Divider()
+
+                Toggle(isOn: $dataManager.globalConfig.weeklyEyeCareNotificationEnabled) {
+                    HStack(alignment: .top, spacing: 10) {
+                        Image(systemName: "chart.line.uptrend.xyaxis.circle")
+                            .foregroundColor(SustainabilityPalette.primary)
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text("每周护眼报告")
+                                .font(SustainabilityTypography.bodyStrong)
+                            Text("按周推送本周护眼天数与累计时长。")
+                                .font(SustainabilityTypography.caption)
+                                .foregroundColor(.secondary)
+                        }
+                    }
+                }
+                .sustainabilityInteractiveRow()
+                .tint(SustainabilityPalette.primary)
+                .onChange(of: dataManager.globalConfig.weeklyEyeCareNotificationEnabled) { _ in
+                    saveConfigAndReschedule()
+                }
+
+                if dataManager.globalConfig.weeklyEyeCareNotificationEnabled {
+                    HStack(spacing: 8) {
+                        Image(systemName: "calendar")
+                            .foregroundColor(SustainabilityPalette.cta)
+                            .frame(width: 18)
+                        Text("周报日")
+                            .font(SustainabilityTypography.bodyStrong)
+                        Spacer()
+                        Picker("周报日", selection: $dataManager.globalConfig.weeklyEyeCareNotificationWeekday) {
+                            ForEach(1...7, id: \.self) { weekday in
+                                Text(weekdayTitle(weekday)).tag(weekday)
+                            }
+                        }
+                        .pickerStyle(.menu)
+                        .font(SustainabilityTypography.subBody)
+                    }
+                    .sustainabilityInteractiveRow()
+                    .onChange(of: dataManager.globalConfig.weeklyEyeCareNotificationWeekday) { _ in
+                        saveConfigAndReschedule()
+                    }
+
+                    notificationTimeRow(
+                        title: "每周推送时间",
+                        hour: $dataManager.globalConfig.weeklyEyeCareNotificationHour,
+                        minute: $dataManager.globalConfig.weeklyEyeCareNotificationMinute
+                    )
+                    .onChange(of: dataManager.globalConfig.weeklyEyeCareNotificationHour) { _ in
+                        saveConfigAndReschedule()
+                    }
+                    .onChange(of: dataManager.globalConfig.weeklyEyeCareNotificationMinute) { _ in
+                        saveConfigAndReschedule()
+                    }
+                }
+
+                if notificationManager.authorizationStatus == .denied {
+                    Divider()
+                    VStack(alignment: .leading, spacing: 6) {
+                        Text("系统通知权限未开启，无法发送护眼报告提醒。")
+                            .font(SustainabilityTypography.caption)
+                            .foregroundColor(.secondary)
+                        Button("前往系统设置开启通知") {
+                            openSystemNotificationSettings()
+                        }
+                        .font(SustainabilityTypography.captionStrong)
+                        .foregroundColor(SustainabilityPalette.cta)
+                    }
+                }
+            }
         }
     }
 
@@ -324,6 +437,36 @@ struct SettingsView: View {
         .buttonStyle(.plain)
     }
 
+    private func notificationTimeRow(title: String, hour: Binding<Int>, minute: Binding<Int>) -> some View {
+        HStack(spacing: 8) {
+            Image(systemName: "clock")
+                .foregroundColor(SustainabilityPalette.cta)
+                .frame(width: 18)
+            Text(LocalizedStringKey(title))
+                .font(SustainabilityTypography.bodyStrong)
+            Spacer()
+            Picker("小时", selection: hour) {
+                ForEach(0..<24, id: \.self) { value in
+                    Text(String(format: "%02d", value)).tag(value)
+                }
+            }
+            .pickerStyle(.menu)
+            .font(SustainabilityTypography.subBody)
+
+            Text(":")
+                .foregroundColor(.secondary)
+
+            Picker("分钟", selection: minute) {
+                ForEach(0..<60, id: \.self) { value in
+                    Text(String(format: "%02d", value)).tag(value)
+                }
+            }
+            .pickerStyle(.menu)
+            .font(SustainabilityTypography.subBody)
+        }
+        .sustainabilityInteractiveRow()
+    }
+
     private func guideAction(icon: String, title: String, subtitle: String, action: @escaping () -> Void) -> some View {
         Button(action: action) {
             HStack(alignment: .top, spacing: 10) {
@@ -372,6 +515,23 @@ struct SettingsView: View {
             fallback: fallback,
             language: dataManager.globalConfig.appLanguage
         )
+    }
+
+    private func saveConfigAndReschedule() {
+        dataManager.saveConfig()
+        notificationManager.syncSchedule()
+    }
+
+    private func weekdayTitle(_ weekday: Int) -> String {
+        let symbols = Calendar.current.weekdaySymbols
+        guard !symbols.isEmpty else { return "Day \(weekday)" }
+        let index = min(max(weekday - 1, 0), symbols.count - 1)
+        return symbols[index]
+    }
+
+    private func openSystemNotificationSettings() {
+        guard let url = URL(string: UIApplication.openSettingsURLString) else { return }
+        UIApplication.shared.open(url)
     }
 
     private func requestReview() {
