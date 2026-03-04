@@ -2,8 +2,7 @@
 //  DashboardView.swift
 //  DarkReader
 //
-//  Sustainability Platform 风格控制台（重构版）
-//  信息架构：状态总览 → 特色功能 → 模式策略 → 网站列表 → 高级/日志
+//  首页重构：顶部护眼报告 + 块状操作区（2 列）+ 右上角设置入口
 //
 
 import SwiftUI
@@ -11,11 +10,25 @@ import SafariServices
 
 struct DashboardView: View {
     @EnvironmentObject var dataManager: SharedDataManager
-    @EnvironmentObject var appNavigation: AppNavigationState
     @Environment(\.colorScheme) private var colorScheme
+    let onOpenThemes: () -> Void
+    let onOpenSettings: () -> Void
 
     @State private var extensionEnabled: Bool? = nil
     @State private var isCheckingExtension = false
+
+    private let actionColumns = [
+        GridItem(.flexible(), spacing: 12),
+        GridItem(.flexible(), spacing: 12)
+    ]
+
+    init(
+        onOpenThemes: @escaping () -> Void = {},
+        onOpenSettings: @escaping () -> Void = {}
+    ) {
+        self.onOpenThemes = onOpenThemes
+        self.onOpenSettings = onOpenSettings
+    }
 
     var body: some View {
         NavigationView {
@@ -23,24 +36,13 @@ struct DashboardView: View {
                 SustainabilityBackground()
                 ScrollView {
                     VStack(spacing: 12) {
-                        // 1. 核心控制（模式 + 运行状态）
-                        coreControlCard
+                        eyeCareReportCard
 
-                        // 2. 扩展未启用提示
                         if extensionEnabled == false {
                             extensionWarningCard
                         }
 
-                        // 3. 快速操作区
-                        quickActionsCard
-
-                        // 4. 最近访问网站
-                        websiteSettingsCard
-
-                        // 5. 错误日志（有记录时显示）
-                        if !dataManager.errorLogs.isEmpty {
-                            errorLogsCard
-                        }
+                        operationBoardCard
                     }
                     .padding(.horizontal, 16)
                     .padding(.top, 10)
@@ -48,10 +50,10 @@ struct DashboardView: View {
                 }
                 .font(SustainabilityTypography.body)
             }
-            .navigationTitle("控制台")
+            .navigationTitle("首页")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
-                ToolbarItem(placement: .navigationBarTrailing) {
+                ToolbarItem(placement: .navigationBarLeading) {
                     Button {
                         Task { await checkExtensionStateAsync() }
                     } label: {
@@ -62,6 +64,12 @@ struct DashboardView: View {
                         }
                     }
                     .accessibilityLabel("刷新扩展状态")
+                }
+                ToolbarItem(placement: .navigationBarTrailing) {
+                    Button(action: onOpenSettings) {
+                        Image(systemName: "gearshape.fill")
+                    }
+                    .accessibilityLabel("打开设置")
                 }
             }
             .refreshable {
@@ -74,16 +82,20 @@ struct DashboardView: View {
         .sustainabilityChrome()
     }
 
-    // MARK: - 1. 核心控制区
+    // MARK: - 1. 护眼报告
 
-    private var coreControlCard: some View {
-        SustainabilityCard {
-            VStack(alignment: .leading, spacing: 14) {
+    private var eyeCareReportCard: some View {
+        let today = dataManager.todayEyeCareRecord
+        let reduction = dataManager.estimatedBlueLightReduction(for: today)
+        let weekActiveDays = dataManager.currentWeekEyeCareRecords.filter { $0.darkModeDuration > 0 }.count
+
+        return SustainabilityCard {
+            VStack(alignment: .leading, spacing: 12) {
                 HStack(alignment: .top) {
                     VStack(alignment: .leading, spacing: 4) {
-                        Text("核心控制")
+                        Text("护眼报告")
                             .font(SustainabilityTypography.title)
-                        Text("先选全局模式，再按站点精调")
+                        Text("当前状态与今日效果总览")
                             .font(SustainabilityTypography.caption)
                             .foregroundColor(.secondary)
                     }
@@ -95,124 +107,211 @@ struct DashboardView: View {
                     )
                 }
 
-                Picker("模式", selection: $dataManager.globalConfig.mode) {
-                    ForEach(DarkMode.allCases) { mode in
-                        Label(LocalizedStringKey(mode.displayNameKey), systemImage: mode.systemImageName)
-                            .tag(mode)
-                    }
-                }
-                .pickerStyle(.segmented)
-                .onChange(of: dataManager.globalConfig.mode) { _ in
-                    dataManager.saveConfig()
+                HStack(spacing: 10) {
+                    reportMetric(
+                        icon: "moon.stars.fill",
+                        title: "今日深色时长",
+                        value: formatDuration(today.darkModeDuration),
+                        tint: SustainabilityPalette.primary
+                    )
+                    reportMetric(
+                        icon: "sun.max.trianglebadge.exclamationmark",
+                        title: "蓝光减少估算",
+                        value: "约 \(Int(reduction * 100))%",
+                        tint: SustainabilityPalette.info
+                    )
                 }
 
                 HStack(spacing: 10) {
-                    Button {
-                        appNavigation.selectedTab = 1
-                    } label: {
-                        metricBlock(
-                            icon: "paintpalette.fill",
-                            iconColor: SustainabilityPalette.cta,
-                            title: "默认主题",
-                            value: dataManager.defaultTheme.localizedDisplayName(
-                                language: dataManager.globalConfig.appLanguage
-                            )
-                        )
-                    }
-                    .buttonStyle(.plain)
-
-                    NavigationLink {
-                        ScheduleView().environmentObject(dataManager)
-                    } label: {
-                        metricBlock(
-                            icon: dataManager.globalConfig.scheduleEnabled ? "timer.circle.fill" : "timer",
-                            iconColor: dataManager.globalConfig.scheduleEnabled
-                                ? SustainabilityPalette.primary : .secondary,
-                            title: "定时模式",
-                            value: scheduleStatusText
-                        )
-                    }
-                    .buttonStyle(.plain)
+                    reportMetric(
+                        icon: "calendar.badge.clock",
+                        title: "本周活跃天数",
+                        value: "\(weekActiveDays) / 7",
+                        tint: SustainabilityPalette.success
+                    )
+                    reportMetric(
+                        icon: "globe",
+                        title: "今日护眼站点",
+                        value: "\(today.sitesCount)",
+                        tint: SustainabilityPalette.cta
+                    )
                 }
 
-                Text(LocalizedStringKey(dataManager.globalConfig.mode.descriptionKey))
-                    .font(SustainabilityTypography.caption)
-                    .foregroundColor(.secondary)
-                    .lineLimit(2)
-
-                if dataManager.globalConfig.mode != .auto && dataManager.globalConfig.scheduleEnabled {
-                    HStack(spacing: 6) {
-                        Image(systemName: "info.circle.fill")
-                            .font(SustainabilityTypography.caption)
-                            .foregroundColor(SustainabilityPalette.warm)
-                        Text("当前模式会覆盖定时设置。定时模式需在“跟随系统”下生效。")
-                            .font(SustainabilityTypography.caption)
-                            .foregroundColor(SustainabilityPalette.warm)
-                            .lineLimit(2)
+                NavigationLink {
+                    EyeCareReportView().environmentObject(dataManager)
+                } label: {
+                    HStack {
+                        Text("查看详细报告")
+                            .font(SustainabilityTypography.captionStrong)
+                            .foregroundColor(SustainabilityPalette.cta)
+                        Spacer()
+                        Image(systemName: "chevron.right")
+                            .font(SustainabilityTypography.captionStrong)
+                            .foregroundColor(.secondary)
                     }
-                    .padding(10)
-                    .background(SustainabilityPalette.warm.opacity(0.1))
-                    .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
+                    .sustainabilityInteractiveRow()
                 }
+                .buttonStyle(.plain)
             }
         }
     }
 
-    private var statusSubtitle: String {
-        if isCheckingExtension { return "检测扩展连接状态..." }
-        switch extensionEnabled {
-        case .some(true): return "扩展已连接，策略正在生效"
-        case .some(false): return "扩展未启用，请前往 Safari 开启"
-        case .none: return "点击刷新检测扩展状态"
-        }
-    }
-
-    private var scheduleStatusText: String {
-        let cfg = dataManager.globalConfig
-        guard cfg.scheduleEnabled else { return "未启用" }
-        switch cfg.scheduleTriggerSource {
-        case .system:
-            return colorScheme == .dark ? "跟随系统（深色）" : "跟随系统（浅色）"
-        case .manual, .sunsetSunrise:
-            return cfg.isInScheduledTime ? "深色进行中" : cfg.scheduleTimeDescription
-        }
-    }
-
-    private var todayReportSubtitle: String {
-        let duration = dataManager.todayEyeCareRecord.darkModeDuration
-        guard duration > 0 else { return "今日暂无数据" }
-        let minutes = Int(duration / 60)
-        if minutes >= 60 {
-            return "\(minutes / 60)h \(minutes % 60)m"
-        }
-        return "\(minutes)m"
-    }
-
-    private func metricBlock(icon: String, iconColor: Color, title: String, value: String) -> some View {
-        HStack(spacing: 10) {
+    private func reportMetric(icon: String, title: String, value: String, tint: Color) -> some View {
+        VStack(alignment: .leading, spacing: 6) {
             Image(systemName: icon)
                 .font(SustainabilityTypography.subBodyStrong)
-                .foregroundColor(iconColor)
-                .frame(width: 22, height: 22)
-
-            VStack(alignment: .leading, spacing: 2) {
-                Text(title)
-                    .font(SustainabilityTypography.caption)
-                    .foregroundColor(.secondary)
-                Text(value)
-                    .font(SustainabilityTypography.captionStrong)
-                    .foregroundColor(.primary)
-                    .lineLimit(1)
-            }
+                .foregroundColor(tint)
+            Text(title)
+                .font(SustainabilityTypography.caption)
+                .foregroundColor(.secondary)
+                .lineLimit(1)
+            Text(value)
+                .font(SustainabilityTypography.bodyStrong)
+                .foregroundColor(.primary)
+                .lineLimit(1)
         }
         .frame(maxWidth: .infinity, alignment: .leading)
-        .padding(.vertical, 11)
+        .padding(.vertical, 10)
         .padding(.horizontal, 12)
         .background(SustainabilityPalette.elevated(colorScheme))
         .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
     }
 
-    // MARK: - 2. 扩展未启用警告
+    // MARK: - 2. 操作区
+
+    private var operationBoardCard: some View {
+        SustainabilityCard {
+            VStack(alignment: .leading, spacing: 12) {
+                SustainabilitySectionTitle("操作区域", subtitle: "核心功能集中在一个面板内")
+
+                modeControlBlock
+
+                LazyVGrid(columns: actionColumns, spacing: 12) {
+                    NavigationLink {
+                        ScheduleView().environmentObject(dataManager)
+                    } label: {
+                        operationTile(
+                            icon: "sparkles",
+                            title: "智能打开护眼模式",
+                            subtitle: scheduleStatusText,
+                            tint: SustainabilityPalette.primary,
+                            emphasize: dataManager.globalConfig.scheduleEnabled
+                        )
+                    }
+                    .buttonStyle(.plain)
+
+                    Button(action: onOpenThemes) {
+                        operationTile(
+                            icon: "paintpalette.fill",
+                            title: "选择护眼效果",
+                            subtitle: dataManager.defaultTheme.localizedDisplayName(
+                                language: dataManager.globalConfig.appLanguage
+                            ),
+                            tint: SustainabilityPalette.cta,
+                            emphasize: true
+                        )
+                    }
+                    .buttonStyle(.plain)
+
+                    NavigationLink {
+                        WebsiteSettingsView().environmentObject(dataManager)
+                    } label: {
+                        operationTile(
+                            icon: "slider.horizontal.3",
+                            title: "点对点护眼模式",
+                            subtitle: siteModeStatusText,
+                            tint: SustainabilityPalette.info,
+                            emphasize: dataManager.siteRules.values.contains { $0.hasCustomSettings }
+                        )
+                    }
+                    .buttonStyle(.plain)
+
+                    NavigationLink {
+                        AdvancedStrategyView().environmentObject(dataManager)
+                    } label: {
+                        operationTile(
+                            icon: "gearshape.2.fill",
+                            title: "更多高级操作",
+                            subtitle: advancedStatusText,
+                            tint: SustainabilityPalette.warm,
+                            emphasize: activeStrategyCount > 0 || !dataManager.errorLogs.isEmpty
+                        )
+                    }
+                    .buttonStyle(.plain)
+                }
+            }
+        }
+    }
+
+    private var modeControlBlock: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            HStack {
+                Text("打开护眼开关")
+                    .font(SustainabilityTypography.captionStrong)
+                Spacer()
+                Text(NSLocalizedString(dataManager.globalConfig.mode.displayNameKey, comment: ""))
+                    .font(SustainabilityTypography.caption)
+                    .foregroundColor(.secondary)
+            }
+
+            Picker("模式", selection: $dataManager.globalConfig.mode) {
+                ForEach(DarkMode.allCases) { mode in
+                    Label(LocalizedStringKey(mode.displayNameKey), systemImage: mode.systemImageName)
+                        .tag(mode)
+                }
+            }
+            .pickerStyle(.segmented)
+            .onChange(of: dataManager.globalConfig.mode) { _ in
+                dataManager.saveConfig()
+            }
+
+            Text(LocalizedStringKey(dataManager.globalConfig.mode.descriptionKey))
+                .font(SustainabilityTypography.caption)
+                .foregroundColor(.secondary)
+                .lineLimit(2)
+        }
+        .padding(12)
+        .background(SustainabilityPalette.elevated(colorScheme))
+        .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+    }
+
+    private func operationTile(
+        icon: String,
+        title: String,
+        subtitle: String,
+        tint: Color,
+        emphasize: Bool
+    ) -> some View {
+        VStack(alignment: .leading, spacing: 8) {
+            HStack {
+                Image(systemName: icon)
+                    .font(SustainabilityTypography.subBodyStrong)
+                    .foregroundColor(emphasize ? tint : .secondary)
+                Spacer()
+                if emphasize {
+                    Circle()
+                        .fill(tint)
+                        .frame(width: 6, height: 6)
+                }
+            }
+
+            Text(title)
+                .font(SustainabilityTypography.captionStrong)
+                .foregroundColor(.primary)
+                .lineLimit(2)
+
+            Text(subtitle)
+                .font(SustainabilityTypography.caption)
+                .foregroundColor(.secondary)
+                .lineLimit(2)
+        }
+        .frame(maxWidth: .infinity, minHeight: 106, alignment: .topLeading)
+        .padding(12)
+        .background(SustainabilityPalette.elevated(colorScheme))
+        .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+    }
+
+    // MARK: - 3. 扩展未启用警告
 
     private var extensionWarningCard: some View {
         SustainabilityCard {
@@ -240,239 +339,60 @@ struct DashboardView: View {
         }
     }
 
-    // MARK: - 3. 快速操作区
-
-    private let actionColumns = [
-        GridItem(.flexible(), spacing: 10),
-        GridItem(.flexible(), spacing: 10)
-    ]
-
-    private var quickActionsCard: some View {
-        SustainabilityCard {
-            VStack(alignment: .leading, spacing: 10) {
-                SustainabilitySectionTitle("快速操作", subtitle: "常用功能集中入口")
-                LazyVGrid(columns: actionColumns, spacing: 10) {
-                    NavigationLink {
-                        ScheduleView().environmentObject(dataManager)
-                    } label: {
-                        quickActionTile(
-                            icon: "clock.badge.checkmark.fill",
-                            iconColor: SustainabilityPalette.primary,
-                            title: "定时深色",
-                            subtitle: dataManager.globalConfig.scheduleEnabled ? "已启用" : "未启用",
-                            emphasize: dataManager.globalConfig.scheduleEnabled
-                        )
-                    }
-                    .buttonStyle(.plain)
-
-                    NavigationLink {
-                        WebsiteSettingsView().environmentObject(dataManager)
-                    } label: {
-                        quickActionTile(
-                            icon: "slider.horizontal.3",
-                            iconColor: SustainabilityPalette.cta,
-                            title: "网站精调",
-                            subtitle: localizedCount("settings.count.sites", dataManager.siteRules.count),
-                            emphasize: dataManager.siteRules.values.contains { $0.hasCustomSettings }
-                        )
-                    }
-                    .buttonStyle(.plain)
-
-                    Button {
-                        appNavigation.selectedTab = 1
-                    } label: {
-                        quickActionTile(
-                            icon: "swatchpalette.fill",
-                            iconColor: SustainabilityPalette.info,
-                            title: "主题管理",
-                            subtitle: dataManager.defaultTheme.localizedDisplayName(
-                                language: dataManager.globalConfig.appLanguage
-                            ),
-                            emphasize: true
-                        )
-                    }
-                    .buttonStyle(.plain)
-
-                    NavigationLink {
-                        EyeCareReportView()
-                    } label: {
-                        quickActionTile(
-                            icon: "chart.bar.xaxis",
-                            iconColor: SustainabilityPalette.success,
-                            title: "护眼报告",
-                            subtitle: todayReportSubtitle,
-                            emphasize: dataManager.todayEyeCareRecord.darkModeDuration > 0
-                        )
-                    }
-                    .buttonStyle(.plain)
-
-                    NavigationLink {
-                        AdvancedStrategyView()
-                    } label: {
-                        quickActionTile(
-                            icon: "gearshape.2.fill",
-                            iconColor: SustainabilityPalette.neutral,
-                            title: "高级策略",
-                            subtitle: "性能/图片/覆盖",
-                            emphasize: dataManager.globalConfig.performanceMode || dataManager.globalConfig.ignoreNativeDarkMode
-                        )
-                    }
-                    .buttonStyle(.plain)
-                }
-            }
-        }
-    }
-
-    private func quickActionTile(
-        icon: String,
-        iconColor: Color,
-        title: String,
-        subtitle: String,
-        emphasize: Bool
-    ) -> some View {
-        VStack(alignment: .leading, spacing: 6) {
-            HStack {
-                Image(systemName: icon)
-                    .font(SustainabilityTypography.subBodyStrong)
-                    .foregroundColor(emphasize ? iconColor : .secondary)
-                Spacer()
-                if emphasize {
-                    Circle()
-                        .fill(iconColor)
-                        .frame(width: 6, height: 6)
-                }
-            }
-
-            Text(title)
-                .font(SustainabilityTypography.captionStrong)
-                .foregroundColor(.primary)
-                .lineLimit(1)
-
-            Text(subtitle)
-                .font(SustainabilityTypography.caption)
-                .foregroundColor(.secondary)
-                .lineLimit(1)
-        }
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .padding(.vertical, 10)
-        .padding(.horizontal, 12)
-        .background(SustainabilityPalette.elevated(colorScheme))
-        .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
-    }
-
-    private func localizedCount(_ key: String, _ count: Int) -> String {
-        String(format: NSLocalizedString(key, comment: ""), count)
-    }
-
-    // MARK: - 5. 网站设置快捷卡
-
-    private var websiteSettingsCard: some View {
-        let domains = dataManager.visitedDomainsSorted
-        return SustainabilityCard {
-            VStack(alignment: .leading, spacing: 10) {
-                HStack {
-                    SustainabilitySectionTitle("网站设置", subtitle: "按站点配置启用状态、主题与精调")
-                    Spacer()
-                    if !domains.isEmpty {
-                        NavigationLink {
-                            WebsiteSettingsView()
-                        } label: {
-                            Text("全部")
-                                .font(SustainabilityTypography.captionStrong)
-                                .foregroundColor(SustainabilityPalette.cta)
-                        }
-                    }
-                }
-
-                if domains.isEmpty {
-                    VStack(alignment: .leading, spacing: 6) {
-                        Text("先在 Safari 浏览几个网站，随后可在这里逐站点配置深色策略和精细调节。")
-                            .font(SustainabilityTypography.caption)
-                            .foregroundColor(.secondary)
-                    }
-                } else {
-                    // 最多展示 4 个最近站点
-                    ForEach(domains.prefix(4), id: \.self) { domain in
-                        NavigationLink {
-                            WebsiteSettingDetailView(domain: domain)
-                        } label: {
-                            HStack {
-                                // 域名首字母图标
-                                Text(String(domain.prefix(1)).uppercased())
-                                    .font(SustainabilityTypography.captionStrong)
-                                    .foregroundColor(siteColor(for: domain))
-                                    .frame(width: 30, height: 30)
-                                    .background(siteColor(for: domain).opacity(0.15))
-                                    .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
-
-                                VStack(alignment: .leading, spacing: 2) {
-                                    Text(domain)
-                                        .font(SustainabilityTypography.captionStrong)
-                                        .foregroundColor(.primary)
-                                        .lineLimit(1)
-                                    Text(siteStatusLabel(for: domain))
-                                        .font(.system(size: 11))
-                                        .foregroundColor(.secondary)
-                                }
-
-                                Spacer()
-                                Image(systemName: "chevron.right")
-                                    .font(SustainabilityTypography.captionStrong)
-                                    .foregroundColor(.secondary)
-                            }
-                            .sustainabilityInteractiveRow()
-                        }
-                        .buttonStyle(.plain)
-
-                        if domain != domains.prefix(4).last {
-                            Divider()
-                        }
-                    }
-                }
-            }
-        }
-    }
-
-    // MARK: - 5. 错误日志入口
-
-    private var errorLogsCard: some View {
-        NavigationLink {
-            ErrorLogsView()
-        } label: {
-            SustainabilityCard {
-                HStack(spacing: 12) {
-                    Image(systemName: "waveform.path.ecg.rectangle.fill")
-                        .foregroundColor(SustainabilityPalette.warm)
-                        .font(SustainabilityTypography.subBodyStrong)
-
-                    VStack(alignment: .leading, spacing: 3) {
-                        Text("异常诊断")
-                            .font(SustainabilityTypography.bodyStrong)
-                        Text("查看最近渲染错误日志")
-                            .font(SustainabilityTypography.caption)
-                            .foregroundColor(.secondary)
-                    }
-
-                    Spacer()
-
-                    Text("\(dataManager.errorLogs.count)")
-                        .font(SustainabilityTypography.captionStrong)
-                        .foregroundColor(.secondary)
-                        .padding(.horizontal, 8)
-                        .padding(.vertical, 5)
-                        .background(Color.secondary.opacity(0.15))
-                        .clipShape(Capsule())
-
-                    Image(systemName: "chevron.right")
-                        .font(SustainabilityTypography.captionStrong)
-                        .foregroundColor(.secondary)
-                }
-            }
-        }
-        .buttonStyle(.plain)
-    }
-
     // MARK: - 辅助方法
+
+    private var scheduleStatusText: String {
+        let cfg = dataManager.globalConfig
+        guard cfg.scheduleEnabled else { return "未启用" }
+        switch cfg.scheduleTriggerSource {
+        case .system:
+            return colorScheme == .dark ? "跟随系统（深色）" : "跟随系统（浅色）"
+        case .manual, .sunsetSunrise:
+            return cfg.isInScheduledTime ? "深色进行中" : cfg.scheduleTimeDescription
+        }
+    }
+
+    private var siteModeStatusText: String {
+        let customCount = dataManager.siteRules.values.filter { $0.hasCustomSettings }.count
+        if customCount > 0 {
+            return "已配置 \(customCount) 个站点"
+        }
+        let visited = dataManager.visitedDomainsSorted.count
+        return visited > 0 ? "已记录 \(visited) 个站点" : "暂无站点规则"
+    }
+
+    private var activeStrategyCount: Int {
+        [
+            dataManager.globalConfig.performanceMode,
+            dataManager.globalConfig.ignoreNativeDarkMode,
+            dataManager.globalConfig.dimImages,
+            dataManager.globalConfig.lowBatteryEyeCareEnabled,
+            dataManager.globalConfig.hideCookieBanners
+        ]
+        .filter { $0 }
+        .count
+    }
+
+    private var advancedStatusText: String {
+        if !dataManager.errorLogs.isEmpty {
+            return "有 \(dataManager.errorLogs.count) 条异常记录"
+        }
+        if activeStrategyCount > 0 {
+            return "已开启 \(activeStrategyCount) 项策略"
+        }
+        return "性能/图片/覆盖策略"
+    }
+
+    private func formatDuration(_ value: TimeInterval) -> String {
+        guard value > 0 else { return "0m" }
+        let totalMinutes = Int(value / 60)
+        let hours = totalMinutes / 60
+        let minutes = totalMinutes % 60
+        if hours > 0 {
+            return "\(hours)h \(minutes)m"
+        }
+        return "\(minutes)m"
+    }
 
     private var extensionStatus: (icon: String, text: String, color: Color) {
         if isCheckingExtension {
@@ -486,28 +406,6 @@ struct DashboardView: View {
         case .none:
             return ("questionmark.circle.fill", "dashboard.extensionStatus.unknown", .secondary)
         }
-    }
-
-    private func siteColor(for domain: String) -> Color {
-        switch dataManager.siteRules[domain]?.mode {
-        case .some(.on):  return SustainabilityPalette.success
-        case .some(.off): return SustainabilityPalette.neutral
-        default:          return SustainabilityPalette.cta
-        }
-    }
-
-    private func siteStatusLabel(for domain: String) -> String {
-        guard let rule = dataManager.siteRules[domain] else { return "跟随默认" }
-        var parts: [String] = []
-        switch rule.mode {
-        case .on:  parts.append("强制开启")
-        case .off: parts.append("已关闭")
-        case .follow, .none: parts.append("跟随默认")
-        }
-        if rule.focusMode { parts.append("专注") }
-        if abs(rule.brightness - 1.0) > 0.01 { parts.append("亮度 \(Int(rule.brightness * 100))%") }
-        if abs(rule.contrast - 1.0) > 0.01 { parts.append("对比 \(Int(rule.contrast * 100))%") }
-        return parts.joined(separator: " · ")
     }
 
     @MainActor
