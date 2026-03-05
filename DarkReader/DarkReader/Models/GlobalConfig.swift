@@ -318,6 +318,7 @@ enum AppLanguageOption: String, Codable, CaseIterable, Identifiable {
     case system
     case zhHans
     case en
+    case ja
 
     var id: String { rawValue }
 
@@ -329,6 +330,8 @@ enum AppLanguageOption: String, Codable, CaseIterable, Identifiable {
             return Locale(identifier: "zh-Hans")
         case .en:
             return Locale(identifier: "en")
+        case .ja:
+            return Locale(identifier: "ja")
         }
     }
 
@@ -340,6 +343,8 @@ enum AppLanguageOption: String, Codable, CaseIterable, Identifiable {
             return "language.option.zhHans"
         case .en:
             return "language.option.en"
+        case .ja:
+            return "language.option.ja"
         }
     }
 }

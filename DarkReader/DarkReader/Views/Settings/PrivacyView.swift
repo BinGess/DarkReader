@@ -55,7 +55,7 @@ struct PrivacyView: View {
                     .padding(.top, SustainabilityMetrics.pageTopPadding)
                     .padding(.bottom, SustainabilityMetrics.pageBottomPadding)
                 }
-                .font(SustainabilityTypography.body)
+                .sustainabilityReadableContent()
             }
             .navigationTitle("隐私政策")
             .navigationBarTitleDisplayMode(.inline)
@@ -82,7 +82,7 @@ struct PrivacyView: View {
                     Text(LocalizedStringKey(content))
                         .font(SustainabilityTypography.body)
                         .foregroundColor(.secondary)
-                        .lineSpacing(3)
+                        .lineSpacing(SustainabilityTypography.bodyLineSpacing)
                 }
             }
         }

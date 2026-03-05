@@ -80,7 +80,7 @@ struct ThemeManagerView: View {
                 }
                 .padding(.bottom, 90)
             }
-            .font(SustainabilityTypography.body)
+            .sustainabilityReadableContent()
         }
         .overlay(alignment: .bottomTrailing) {
             floatingAddButton
@@ -148,7 +148,7 @@ struct ThemeManagerView: View {
 
                     VStack(spacing: 8) {
                         Text("夜览 · 护眼深色阅读")
-                            .font(.system(size: 17, weight: .semibold))
+                            .font(SustainabilityTypography.title)
                             .foregroundColor(activeTheme.textSwiftUIColor)
                         HStack(spacing: 16) {
                             swatch(activeTheme.backgroundSwiftUIColor, label: "背景")
@@ -187,7 +187,7 @@ struct ThemeManagerView: View {
                 .frame(width: 20, height: 20)
                 .overlay(Circle().stroke(Color.white.opacity(0.3), lineWidth: 0.5))
             Text(label)
-                .font(.system(size: 10, weight: .regular, design: .rounded))
+                .font(SustainabilityTypography.micro)
                 .foregroundColor((Color(hex: "#e0e0e0") ?? .white).opacity(0.7))
         }
     }
@@ -450,7 +450,7 @@ struct ThemeLibraryView: View {
                     .padding(.bottom, SustainabilityMetrics.pageBottomPadding)
                     .padding(.top, SustainabilityMetrics.pageTopPadding - 4)
                 }
-                .font(SustainabilityTypography.body)
+                .sustainabilityReadableContent()
             }
             .navigationTitle("主题库")
             .navigationBarTitleDisplayMode(.inline)

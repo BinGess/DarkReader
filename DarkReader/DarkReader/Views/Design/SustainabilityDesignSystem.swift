@@ -41,13 +41,21 @@ enum SustainabilityPalette {
 }
 
 enum SustainabilityTypography {
-    static let title = Font.system(size: 17, weight: .semibold, design: .rounded)
+    static let title = Font.system(size: 18, weight: .semibold, design: .rounded)
     static let body = Font.system(size: 16, weight: .regular, design: .rounded)
     static let bodyStrong = Font.system(size: 16, weight: .semibold, design: .rounded)
-    static let subBody = Font.system(size: 14, weight: .regular, design: .rounded)
-    static let subBodyStrong = Font.system(size: 14, weight: .semibold, design: .rounded)
-    static let caption = Font.system(size: 12, weight: .regular, design: .rounded)
-    static let captionStrong = Font.system(size: 12, weight: .semibold, design: .rounded)
+    static let subBody = Font.system(size: 15, weight: .regular, design: .rounded)
+    static let subBodyStrong = Font.system(size: 15, weight: .semibold, design: .rounded)
+    static let caption = Font.system(size: 13, weight: .regular, design: .rounded)
+    static let captionStrong = Font.system(size: 13, weight: .semibold, design: .rounded)
+    static let micro = Font.system(size: 11, weight: .regular, design: .rounded)
+    static let heroDisplay = Font.system(size: 34, weight: .bold, design: .rounded)
+    static let heroTitle = Font.system(size: 28, weight: .bold, design: .rounded)
+    static let metricValueLarge = Font.system(size: 20, weight: .bold, design: .rounded)
+    static let metricValueMedium = Font.system(size: 17, weight: .semibold, design: .rounded)
+    static let metricLabel = Font.system(size: 12, weight: .regular, design: .rounded)
+    static let bodyLineSpacing: CGFloat = 2
+    static let captionLineSpacing: CGFloat = 2
 }
 
 enum SustainabilityMetrics {
@@ -180,7 +188,7 @@ struct SustainabilitySectionTitle: View {
                 Text(LocalizedStringKey(subtitle))
                     .font(SustainabilityTypography.caption)
                     .foregroundColor(.secondary)
-                    .lineSpacing(1)
+                    .lineSpacing(SustainabilityTypography.captionLineSpacing)
             }
         }
     }
@@ -193,6 +201,10 @@ extension View {
 
     func sustainabilityInteractiveRow() -> some View {
         modifier(SustainabilityInteractiveRowModifier())
+    }
+
+    func sustainabilityReadableContent(baseFont: Font = SustainabilityTypography.body) -> some View {
+        modifier(SustainabilityReadableContentModifier(baseFont: baseFont))
     }
 }
 
@@ -220,5 +232,15 @@ private struct SustainabilityInteractiveRowModifier: ViewModifier {
             .padding(.vertical, SustainabilityMetrics.rowVerticalPadding)
             .frame(minHeight: SustainabilityMetrics.touchMinHeight)
             .contentShape(Rectangle())
+    }
+}
+
+private struct SustainabilityReadableContentModifier: ViewModifier {
+    let baseFont: Font
+
+    func body(content: Content) -> some View {
+        content
+            .font(baseFont)
+            .lineSpacing(SustainabilityTypography.bodyLineSpacing)
     }
 }

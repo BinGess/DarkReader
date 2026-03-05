@@ -31,6 +31,7 @@ struct OnboardingView: View {
                 completionPage
             }
         }
+        .sustainabilityReadableContent()
         .onReceive(extensionCheckTimer) { _ in
             if currentStep >= 1 && currentStep <= 6 {
                 checkExtensionState()
@@ -63,7 +64,7 @@ struct OnboardingView: View {
             .padding(.bottom, 24)
 
             Text(NSLocalizedString("brand.appName", comment: ""))
-                .font(.system(size: 34, weight: .bold, design: .rounded))
+                .font(SustainabilityTypography.heroDisplay)
                 .padding(.bottom, 4)
 
             Spacer()
@@ -183,7 +184,7 @@ struct OnboardingView: View {
                 .padding(.bottom, 20)
 
             Text("扩展启用成功")
-                .font(.system(size: 28, weight: .bold, design: .rounded))
+                .font(SustainabilityTypography.heroTitle)
                 .padding(.bottom, 8)
 
             Text("已完成配置，深色模式默认跟随系统。现在可以在 Safari 中体验统一的可读性优化。")

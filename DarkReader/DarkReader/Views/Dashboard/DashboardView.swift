@@ -50,7 +50,7 @@ struct DashboardView: View {
                     .padding(.top, SustainabilityMetrics.pageTopPadding)
                     .padding(.bottom, SustainabilityMetrics.pageBottomPadding)
                 }
-                .font(SustainabilityTypography.body)
+                .sustainabilityReadableContent()
             }
             .navigationTitle("首页")
             .navigationBarTitleDisplayMode(.inline)
@@ -94,9 +94,9 @@ struct DashboardView: View {
         let weekRecords = dataManager.currentWeekEyeCareRecords
         let maxDuration = max(weekRecords.map(\.darkModeDuration).max() ?? 0, 1)
         let weekAverageDuration = weekRecords.reduce(0) { $0 + $1.darkModeDuration } / Double(max(weekRecords.count, 1))
-        let reduction = dataManager.estimatedBlueLightReduction(for: today)
+        let darkShieldPoints = dataManager.darkShieldPoints(for: today)
         let displayTodayDuration = formatDuration(max(today.darkModeDuration, 60))
-        let displayReductionPercent = max(Int(reduction * 100), 1)
+        let displayDarkShieldPoints = max(darkShieldPoints, 0)
         let weekActiveDays = dataManager.currentWeekEyeCareRecords.filter { $0.darkModeDuration > 0 }.count
         let topSites = Array(dataManager.siteDistribution(for: Date()).prefix(3))
 
@@ -160,7 +160,7 @@ struct DashboardView: View {
                         weekRecords: weekRecords,
                         maxDuration: maxDuration,
                         todayDurationText: displayTodayDuration,
-                        reductionPercent: displayReductionPercent,
+                        darkShieldPoints: displayDarkShieldPoints,
                         onHero: true
                     )
                     .tag(0)
@@ -169,7 +169,7 @@ struct DashboardView: View {
                         weekActiveDays: weekActiveDays,
                         weekAverageDuration: weekAverageDuration,
                         todayDurationText: displayTodayDuration,
-                        reductionPercent: displayReductionPercent,
+                        darkShieldPoints: displayDarkShieldPoints,
                         onHero: true
                     )
                     .tag(1)
@@ -205,12 +205,12 @@ struct DashboardView: View {
         weekRecords: [DailyEyeCareRecord],
         maxDuration: TimeInterval,
         todayDurationText: String,
-        reductionPercent: Int,
+        darkShieldPoints: Int,
         onHero: Bool = false
     ) -> some View {
         VStack(alignment: .leading, spacing: 8) {
             Text("近 7 天趋势")
-                .font(SustainabilityTypography.captionStrong)
+                .font(SustainabilityTypography.subBodyStrong)
                 .foregroundColor(onHero ? Color.white.opacity(0.86) : .secondary)
 
             HStack(alignment: .bottom, spacing: 6) {
@@ -243,8 +243,8 @@ struct DashboardView: View {
                 )
                 reportMetricChip(
                     icon: "sun.max.trianglebadge.exclamationmark",
-                    title: "蓝光减少估算",
-                    value: "约 \(reductionPercent)%",
+                    title: "暗色保护指数",
+                    value: "\(darkShieldPoints) 点",
                     tint: onHero ? .white : SustainabilityPalette.info,
                     onHero: onHero
                 )
@@ -259,12 +259,12 @@ struct DashboardView: View {
         weekActiveDays: Int,
         weekAverageDuration: TimeInterval,
         todayDurationText: String,
-        reductionPercent: Int,
+        darkShieldPoints: Int,
         onHero: Bool = false
     ) -> some View {
         VStack(alignment: .leading, spacing: 7) {
             Text("周维度报告")
-                .font(SustainabilityTypography.captionStrong)
+                .font(SustainabilityTypography.subBodyStrong)
                 .foregroundColor(onHero ? Color.white.opacity(0.86) : .secondary)
 
             reportTableRow(
@@ -293,8 +293,8 @@ struct DashboardView: View {
                     onHero: onHero
                 )
                 reportCompactMetric(
-                    title: "蓝光估算",
-                    value: "\(reductionPercent)%",
+                    title: "暗色保护分",
+                    value: "\(darkShieldPoints) 点",
                     tint: onHero ? .white : SustainabilityPalette.info,
                     onHero: onHero
                 )
@@ -318,7 +318,7 @@ struct DashboardView: View {
     ) -> some View {
         VStack(alignment: .leading, spacing: 8) {
             Text("站点报告")
-                .font(SustainabilityTypography.captionStrong)
+                .font(SustainabilityTypography.subBodyStrong)
                 .foregroundColor(onHero ? Color.white.opacity(0.86) : .secondary)
 
             reportTableRow(
@@ -359,16 +359,17 @@ struct DashboardView: View {
         tint: Color,
         onHero: Bool = false
     ) -> some View {
-        VStack(alignment: .leading, spacing: 4) {
+        VStack(alignment: .leading, spacing: 6) {
             Label(title, systemImage: icon)
-                .font(SustainabilityTypography.caption)
-                .foregroundColor(onHero ? Color.white.opacity(0.78) : .secondary)
+                .font(SustainabilityTypography.metricLabel)
+                .foregroundColor(onHero ? Color.white.opacity(0.64) : .secondary.opacity(0.85))
                 .lineLimit(1)
 
             Text(value)
-                .font(SustainabilityTypography.bodyStrong)
+                .font(SustainabilityTypography.metricValueLarge.monospacedDigit())
                 .foregroundColor(tint)
                 .lineLimit(1)
+                .minimumScaleFactor(0.85)
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding(.vertical, 10)
@@ -383,15 +384,16 @@ struct DashboardView: View {
         tint: Color,
         onHero: Bool
     ) -> some View {
-        VStack(alignment: .leading, spacing: 2) {
+        VStack(alignment: .leading, spacing: 3) {
             Text(title)
-                .font(SustainabilityTypography.caption)
-                .foregroundColor(onHero ? Color.white.opacity(0.74) : .secondary)
+                .font(SustainabilityTypography.metricLabel)
+                .foregroundColor(onHero ? Color.white.opacity(0.62) : .secondary.opacity(0.8))
                 .lineLimit(1)
             Text(value)
-                .font(SustainabilityTypography.subBodyStrong)
+                .font(SustainabilityTypography.metricValueMedium.monospacedDigit())
                 .foregroundColor(tint)
                 .lineLimit(1)
+                .minimumScaleFactor(0.85)
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding(.vertical, 6)
@@ -410,21 +412,22 @@ struct DashboardView: View {
         VStack(spacing: 0) {
             HStack(spacing: 10) {
                 Image(systemName: icon)
-                    .font(SustainabilityTypography.captionStrong)
-                    .foregroundColor(onHero ? Color.white.opacity(0.74) : .secondary)
+                    .font(SustainabilityTypography.caption)
+                    .foregroundColor(onHero ? Color.white.opacity(0.64) : .secondary.opacity(0.85))
                     .frame(width: 16)
 
                 Text(title)
-                    .font(SustainabilityTypography.caption)
-                    .foregroundColor(onHero ? Color.white.opacity(0.9) : .primary)
+                    .font(SustainabilityTypography.metricLabel)
+                    .foregroundColor(onHero ? Color.white.opacity(0.72) : .secondary)
                     .lineLimit(1)
 
                 Spacer()
 
                 Text(value)
-                    .font(SustainabilityTypography.bodyStrong)
+                    .font(SustainabilityTypography.metricValueMedium.monospacedDigit())
                     .foregroundColor(onHero ? .white : .primary)
                     .lineLimit(1)
+                    .minimumScaleFactor(0.85)
             }
             .padding(.vertical, SustainabilityMetrics.rowVerticalPadding)
 
@@ -641,12 +644,12 @@ struct DashboardView: View {
                 }
 
                 Text(LocalizedStringKey(option.titleKey))
-                    .font(SustainabilityTypography.captionStrong)
+                    .font(SustainabilityTypography.subBodyStrong)
                     .foregroundColor(.primary)
                     .lineLimit(1)
 
                 Text(LocalizedStringKey(option.subtitleKey))
-                    .font(SustainabilityTypography.caption)
+                    .font(SustainabilityTypography.subBody)
                     .foregroundColor(.secondary)
                     .lineLimit(1)
             }
@@ -1125,7 +1128,7 @@ struct EyeCareReportView: View {
 
     private var todaySummaryCard: some View {
         let today = dataManager.todayEyeCareRecord
-        let reduction = dataManager.estimatedBlueLightReduction(for: today)
+        let darkShieldPoints = dataManager.darkShieldPoints(for: today)
         let weekActiveDays = dataManager.currentWeekEyeCareRecords.filter { $0.darkModeDuration > 0 }.count
         let weekAverage = dataManager.currentWeekEyeCareRecords.reduce(0) { $0 + $1.darkModeDuration } / Double(max(dataManager.currentWeekEyeCareRecords.count, 1))
 
@@ -1177,8 +1180,8 @@ struct EyeCareReportView: View {
                     )
                     detailMetricTile(
                         icon: "sun.max.trianglebadge.exclamationmark",
-                        title: "蓝光减少估算",
-                        value: "约 \(Int(reduction * 100))%",
+                        title: "暗色保护指数",
+                        value: "\(darkShieldPoints) 点",
                         tint: .white
                     )
                 }
@@ -1198,7 +1201,7 @@ struct EyeCareReportView: View {
                     )
                 }
 
-                Text("周均深色时长 \(formatDuration(weekAverage))，蓝光减少为估算值，仅用于效果感知。")
+                Text("周均深色时长 \(formatDuration(weekAverage))，今日累计 \(darkShieldPoints) 点暗色保护分（按时长和暖色权重计算）。")
                     .font(SustainabilityTypography.caption)
                     .foregroundColor(Color.white.opacity(0.82))
                     .lineLimit(2)

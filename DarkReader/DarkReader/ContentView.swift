@@ -21,7 +21,7 @@ struct ContentView: View {
                 showThemesPage: $showThemesPage,
                 showSettingsPage: $showSettingsPage
             )
-            .font(SustainabilityTypography.body)
+            .sustainabilityReadableContent()
             .background(Color.clear)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)

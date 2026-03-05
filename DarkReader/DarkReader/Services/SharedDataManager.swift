@@ -700,6 +700,18 @@ extension SharedDataManager {
         return min(max(baseReduction + warmBonus, 0.30), 0.60)
     }
 
+    func darkShieldPoints(for record: DailyEyeCareRecord) -> Int {
+        let reductionRatio = estimatedBlueLightReduction(for: record)
+        return Self.darkShieldPoints(durationSeconds: record.darkModeDuration, reductionRatio: reductionRatio)
+    }
+
+    static func darkShieldPoints(durationSeconds: TimeInterval, reductionRatio: Double) -> Int {
+        guard durationSeconds > 0, reductionRatio > 0 else { return 0 }
+        let safeRatio = min(max(reductionRatio, 0), 1)
+        let weightedHours = (durationSeconds / 3600) * safeRatio
+        return max(Int((weightedHours * 1000).rounded()), 0)
+    }
+
     func refreshSunScheduleIfNeeded(force: Bool = false) {
         guard globalConfig.scheduleTriggerSource == .sunsetSunrise else { return }
         guard let latitude = globalConfig.sunLatitude, let longitude = globalConfig.sunLongitude else { return }

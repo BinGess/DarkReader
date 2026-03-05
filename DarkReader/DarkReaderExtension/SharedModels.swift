@@ -246,6 +246,7 @@ enum AppLanguageOption: String, Codable {
     case system
     case zhHans
     case en
+    case ja
 }
 
 enum DarkMode: String, Codable {

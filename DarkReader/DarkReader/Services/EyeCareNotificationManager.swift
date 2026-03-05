@@ -94,8 +94,8 @@ final class EyeCareNotificationManager: ObservableObject {
 
         let today = dataManager.todayEyeCareRecord
         if today.darkModeDuration > 0 {
-            let reduction = Int(dataManager.estimatedBlueLightReduction(for: today) * 100)
-            content.body = "今日已护眼 \(formatDuration(today.darkModeDuration))，蓝光减少估算约 \(reduction)%。点开查看完整报告。"
+            let darkShieldPoints = dataManager.darkShieldPoints(for: today)
+            content.body = "今日已护眼 \(formatDuration(today.darkModeDuration))，获得 \(darkShieldPoints) 点暗色保护分（按时长和暖色权重计算）。点开查看完整报告。"
         } else {
             content.body = "今天还没有护眼数据，开启夜览后会自动累计统计。"
         }

@@ -3,6 +3,7 @@
 "DarkReader 预览" = "夜览预览";
 "[DarkReader] 无法打开扩展设置：\\(error)" = "[夜览] 无法打开扩展设置：\\(error)";
 "brand.appName" = "夜览";
+"launch.tagline" = "每时每刻呵护你的眼睛";
 "darkmode.desc.auto" = "当系统切换到深色模式时自动启用";
 "darkmode.desc.off" = "完全禁用扩展，恢复网页原始样式";
 "darkmode.desc.on" = "无论系统设置如何，始终应用深色样式";
@@ -37,8 +38,13 @@
 "faq.q.layoutBroken" = "某个网站排版错乱怎么办？";
 "faq.q.siteTheme" = "如何为特定网站设置不同主题？";
 "language.option.en" = "English";
+"language.option.ja" = "日本語";
 "language.option.system" = "跟随系统";
 "language.option.zhHans" = "中文";
+"Back" = "返回";
+"Settings" = "设置";
+"NoirFeed" = "NoirFeed";
+"apple.com" = "apple.com";
 "onboarding.stepProgress" = "步骤 %d / 6";
 "settings.count.feedback" = "%d 条";
 "settings.count.sites" = "%d 个";

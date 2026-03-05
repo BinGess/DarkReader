@@ -233,10 +233,10 @@ browser.runtime.onMessage.addListener((message, sender, sendResponse) => {
       ).then(result => {
         sendResponse({
           durationSeconds: Number(result?.durationSeconds || 0),
-          reductionPercent: Number(result?.reductionPercent || 0)
+          darkShieldPoints: Number(result?.darkShieldPoints || 0)
         });
       }).catch(() => {
-        sendResponse({ durationSeconds: 0, reductionPercent: 0 });
+        sendResponse({ durationSeconds: 0, darkShieldPoints: 0 });
       });
       return true;
     }
@@ -297,6 +297,11 @@ async function getThemeById(themeId) {
 }
 
 function syncActionTitle(appLanguageRaw) {
-  const title = appLanguageRaw === 'en' ? 'AutoDark' : '夜览';
+  let title = '夜览';
+  if (appLanguageRaw === 'en') {
+    title = 'AutoDark';
+  } else if (appLanguageRaw === 'ja') {
+    title = 'アイケアモード';
+  }
   browser.action.setTitle({ title }).catch(() => {});
 }

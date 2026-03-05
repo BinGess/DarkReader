@@ -312,10 +312,10 @@ private class ExtensionDataStore {
     /// 构建 popup 顶部护眼摘要（与主 App 首页统计口径一致）
     func buildEyeCareSummary() -> [String: Any] {
         let todayRecord = todayEyeCareRecord
-        let reductionPercent = Int(estimatedBlueLightReduction(for: todayRecord) * 100)
+        let darkShieldPoints = darkShieldPoints(for: todayRecord)
         return [
             "durationSeconds": todayRecord.darkModeDuration,
-            "reductionPercent": reductionPercent
+            "darkShieldPoints": darkShieldPoints
         ]
     }
 
@@ -360,6 +360,13 @@ private class ExtensionDataStore {
         let baseReduction = 0.30 + Double(max(theme.eyeCareScore - 1, 0)) * 0.04
         let warmBonus = theme.warmthLevel >= 4 ? 0.10 : 0.0
         return min(max(baseReduction + warmBonus, 0.30), 0.60)
+    }
+
+    private func darkShieldPoints(for record: DailyEyeCareRecord) -> Int {
+        let reductionRatio = estimatedBlueLightReduction(for: record)
+        guard record.darkModeDuration > 0, reductionRatio > 0 else { return 0 }
+        let weightedHours = (record.darkModeDuration / 3600) * min(max(reductionRatio, 0), 1)
+        return max(Int((weightedHours * 1000).rounded()), 0)
     }
 
     // MARK: - 写入

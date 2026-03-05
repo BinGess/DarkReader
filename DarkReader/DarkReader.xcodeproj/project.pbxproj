@@ -97,15 +97,11 @@
 		};
 		2B64F9E22F568EA10052264B /* DarkReaderTests */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
-			exceptions = (
-			);
 			path = DarkReaderTests;
 			sourceTree = "<group>";
 		};
 		2B64F9EC2F568EA10052264B /* DarkReaderUITests */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
-			exceptions = (
-			);
 			path = DarkReaderUITests;
 			sourceTree = "<group>";
 		};
@@ -165,7 +161,6 @@
 				F6C59DDFA00E25611359043D /* Info.plist */,
 				CEAEDC64C161CE473C0A4B20 /* DarkReaderWidget.entitlements */,
 			);
-			name = DarkReaderWidget;
 			path = DarkReaderWidget;
 			sourceTree = "<group>";
 		};
@@ -331,6 +326,7 @@
 				en,
 				Base,
 				"zh-Hans",
+				ja,
 			);
 			mainGroup = 2B64F9C92F568E9D0052264B;
 			minimizedProjectReferenceProxies = 1;

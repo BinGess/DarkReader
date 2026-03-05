@@ -122,7 +122,7 @@ struct ThemeEditorView: View {
                         }
                     }
                 }
-                .font(SustainabilityTypography.body)
+                .sustainabilityReadableContent()
                 .tint(SustainabilityPalette.primary)
                 .applyListBackgroundClear()
             }
@@ -471,7 +471,7 @@ struct ThemePreviewCard: View {
                 VStack(alignment: .leading, spacing: compact ? 6 : 8) {
                     if showsBrandTitle {
                         Text("NoirFeed")
-                            .font(.system(size: 18, weight: .semibold, design: .rounded))
+                            .font(SustainabilityTypography.title)
                             .foregroundColor(secondaryTextColor)
                     }
 

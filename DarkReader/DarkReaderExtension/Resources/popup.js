@@ -17,8 +17,9 @@ let currentMode = 'smart';
 //   而不是站点级覆盖主题（siteThemeId），确保与主 App 双向同步
 let currentThemeId = '';
 let isPaused = false;
+let isActiveOnPage = false;
 let allThemes = [];
-let eyeCareSummary = { durationSeconds: 0, reductionPercent: 0 };
+let eyeCareSummary = { durationSeconds: 0, darkShieldPoints: 0 };
 let currentLanguage = 'zhHans';
 const SUPPORT_EMAIL = 'baibin1989@gmail.com';
 const POPUP_LANGUAGE_STORAGE_KEY = 'popupLanguage';
@@ -28,7 +29,7 @@ const I18N = {
     brandName: '护眼模式',
     hero: {
       panelAria: '护眼模式当前站点控制面板',
-      status: '护眼模式正在开启中"'
+      status: '护眼模式正在开启中：'
     },
     pause: {
       title: '暂停或恢复当前站点',
@@ -60,8 +61,8 @@ const I18N = {
     },
     stats: {
       durationLabel: '已开启时长',
-      reductionLabel: '蓝光减少估算',
-      reductionPrefix: '约'
+      reductionLabel: '暗色保护指数',
+      reductionSuffix: '点'
     },
     feedback: {
       title: '反馈问题',
@@ -119,8 +120,8 @@ const I18N = {
     },
     stats: {
       durationLabel: 'Eye-care Duration',
-      reductionLabel: 'Blue Light Reduced',
-      reductionPrefix: '~'
+      reductionLabel: 'Dark Shield Index',
+      reductionSuffix: 'pts'
     },
     feedback: {
       title: 'Report an Issue',
@@ -140,6 +141,65 @@ const I18N = {
     domain: {
       loading: 'Loading...',
       unknown: 'Unknown Domain'
+    }
+  },
+  ja: {
+    brandName: 'アイケアモード',
+    hero: {
+      panelAria: 'アイケアモードの現在サイトコントロールパネル',
+      status: 'アイケアモードは現在有効です。'
+    },
+    pause: {
+      title: 'このサイトを一時停止または再開',
+      banner: 'このサイトではアイケアモードが一時停止中です。',
+      resume: '再開'
+    },
+    labels: {
+      mode: 'アイケアモード',
+      theme: 'アイケアテーマ'
+    },
+    mode: {
+      system: 'システムに従う',
+      on: '常にオン',
+      off: '常にオフ',
+      smart: 'スマートオン'
+    },
+    theme: {
+      followDefault: 'デフォルトに従う',
+      builtinGroup: '内蔵テーマ',
+      customGroup: 'カスタムテーマ',
+      theme_001: 'ピュアブラック OLED',
+      theme_002: 'ディープグレー（デフォルト）',
+      theme_003: 'アイケアグリーン',
+      theme_004: 'ウォームブラウン'
+    },
+    actions: {
+      openSettings: '設定を開く',
+      reportIssue: '問題を報告'
+    },
+    stats: {
+      durationLabel: 'アイケア時間',
+      reductionLabel: 'ダークシールド指数',
+      reductionSuffix: '点'
+    },
+    feedback: {
+      title: '問題を報告',
+      closeAria: 'フィードバックパネルを閉じる',
+      placeholder: '問題内容を記入してください（例: レイアウト崩れ、文字が見にくい）...',
+      submit: 'フィードバック送信',
+      submitting: '送信中...',
+      emailOpened: 'メールを開きました',
+      mailSubjectPrefix: '[アイケアモード] 問題フィードバック',
+      mailGreeting: 'こんにちは。ユーザーからの問題報告です:',
+      mailSite: 'サイト',
+      mailTheme: 'テーマ',
+      mailTime: '時間',
+      mailContent: '内容',
+      unknown: '不明'
+    },
+    domain: {
+      loading: '読み込み中...',
+      unknown: '不明なドメイン'
     }
   }
 };
@@ -189,8 +249,14 @@ async function initialize() {
   try {
     const status = await browser.tabs.sendMessage(tab.id, { action: 'getStatus' });
     isPaused = status?.isPaused || false;
+    if (typeof status?.isActive === 'boolean') {
+      isActiveOnPage = status.isActive;
+    } else {
+      isActiveOnPage = modeIndicatesActive(currentMode);
+    }
   } catch (_) {
     isPaused = false;
+    isActiveOnPage = modeIndicatesActive(currentMode);
   }
 
   try {
@@ -214,10 +280,17 @@ async function initialize() {
   renderModeControl();
   renderThemeSelect();
   renderPauseState();
+  renderEyeCareSummary();
 }
 
 function applyI18n() {
-  document.documentElement.lang = currentLanguage === 'en' ? 'en' : 'zh-CN';
+  if (currentLanguage === 'en') {
+    document.documentElement.lang = 'en';
+  } else if (currentLanguage === 'ja') {
+    document.documentElement.lang = 'ja';
+  } else {
+    document.documentElement.lang = 'zh-CN';
+  }
   document.title = t('brandName');
 
   setText('heroStatusText', t('hero.status'));
@@ -269,6 +342,10 @@ function applyI18n() {
   }
 
   renderEyeCareSummary();
+}
+
+function modeIndicatesActive(mode) {
+  return mode === 'on' || mode === 'smart' || mode === 'system' || mode === 'follow';
 }
 
 function renderModeControl() {
@@ -329,23 +406,31 @@ async function loadEyeCareSummary() {
     const result = await browser.runtime.sendMessage({ action: 'getEyeCareSummary' });
     eyeCareSummary = {
       durationSeconds: Number(result?.durationSeconds || 0),
-      reductionPercent: Number(result?.reductionPercent || 0)
+      darkShieldPoints: Number(result?.darkShieldPoints || 0)
     };
   } catch (_) {
-    eyeCareSummary = { durationSeconds: 0, reductionPercent: 0 };
+    eyeCareSummary = { durationSeconds: 0, darkShieldPoints: 0 };
   }
 }
 
 function renderEyeCareSummary() {
-  const safeDuration = Number.isFinite(eyeCareSummary.durationSeconds)
+  const rawDuration = Number.isFinite(eyeCareSummary.durationSeconds)
     ? Math.max(eyeCareSummary.durationSeconds, 0)
     : 0;
-  const safeReduction = Number.isFinite(eyeCareSummary.reductionPercent)
-    ? Math.min(Math.max(Math.trunc(eyeCareSummary.reductionPercent), 0), 100)
+  const rawShieldPoints = Number.isFinite(eyeCareSummary.darkShieldPoints)
+    ? Math.max(Math.trunc(eyeCareSummary.darkShieldPoints), 0)
     : 0;
+  const shouldApplyMinimum = !isPaused && currentMode !== 'off';
+
+  const safeDuration = shouldApplyMinimum
+    ? Math.max(rawDuration, 60)
+    : rawDuration;
+  const safeShieldPoints = shouldApplyMinimum
+    ? Math.max(rawShieldPoints, 1)
+    : rawShieldPoints;
 
   setText('eyeCareDurationValue', formatDuration(safeDuration));
-  setText('eyeCareReductionValue', `${t('stats.reductionPrefix')} ${safeReduction}%`);
+  setText('eyeCareReductionValue', `${safeShieldPoints} ${t('stats.reductionSuffix')}`);
 }
 
 function bindEvents() {
@@ -570,8 +655,10 @@ async function openFeedbackEmail(feedback) {
 function resolveLanguage(option) {
   if (option === 'en') return 'en';
   if (option === 'zhHans') return 'zhHans';
+  if (option === 'ja') return 'ja';
 
   const locale = (navigator.language || '').toLowerCase();
+  if (locale.startsWith('ja')) return 'ja';
   if (locale.startsWith('zh')) return 'zhHans';
   return 'en';
 }
@@ -579,7 +666,7 @@ function resolveLanguage(option) {
 function loadPersistedLanguage() {
   try {
     const stored = localStorage.getItem(POPUP_LANGUAGE_STORAGE_KEY);
-    if (stored === 'en' || stored === 'zhHans') return stored;
+    if (stored === 'en' || stored === 'zhHans' || stored === 'ja') return stored;
   } catch (_) {}
   return resolveLanguage('system');
 }

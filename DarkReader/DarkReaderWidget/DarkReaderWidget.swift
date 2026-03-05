@@ -31,14 +31,14 @@ private struct EyeCareWidgetSnapshot {
     var todaySitesCount: Int
     var weeklyTotalDuration: TimeInterval
     var weeklyActiveDays: Int
-    var estimatedReduction: Int
+    var darkShieldPoints: Int
 
     static let empty = EyeCareWidgetSnapshot(
         todayDuration: 0,
         todaySitesCount: 0,
         weeklyTotalDuration: 0,
         weeklyActiveDays: 0,
-        estimatedReduction: 0
+        darkShieldPoints: 0
     )
 }
 
@@ -56,7 +56,7 @@ private struct EyeCareTimelineProvider: TimelineProvider {
                 todaySitesCount: 8,
                 weeklyTotalDuration: 12 * 3600,
                 weeklyActiveDays: 4,
-                estimatedReduction: 38
+                darkShieldPoints: 380
             )
         )
     }
@@ -104,7 +104,7 @@ private enum EyeCareWidgetStore {
         let weeklyDuration = weekRecords.reduce(0.0) { $0 + $1.darkModeDuration }
         let weeklyActiveDays = weekRecords.filter { $0.darkModeDuration > 0 }.count
 
-        let reduction = estimateBlueLightReduction(
+        let darkShieldPoints = estimateDarkShieldPoints(
             defaults: defaults,
             record: todayRecord,
             fallbackThemeId: defaultThemeId(defaults: defaults)
@@ -115,7 +115,7 @@ private enum EyeCareWidgetStore {
             todaySitesCount: todayRecord?.sitesCount ?? 0,
             weeklyTotalDuration: weeklyDuration,
             weeklyActiveDays: weeklyActiveDays,
-            estimatedReduction: reduction
+            darkShieldPoints: darkShieldPoints
         )
     }
 
@@ -128,7 +128,7 @@ private enum EyeCareWidgetStore {
         return config.defaultThemeId
     }
 
-    private static func estimateBlueLightReduction(
+    private static func estimateDarkShieldPoints(
         defaults: UserDefaults,
         record: WidgetDailyEyeCareRecord?,
         fallbackThemeId: String
@@ -140,8 +140,9 @@ private enum EyeCareWidgetStore {
 
         let base = 0.30 + Double(max(eyeCareScore - 1, 0)) * 0.04
         let warmBonus = warmthLevel >= 4 ? 0.10 : 0.0
-        let value = min(max(base + warmBonus, 0.30), 0.60)
-        return Int((value * 100).rounded())
+        let reductionRatio = min(max(base + warmBonus, 0.30), 0.60)
+        let weightedHours = (record.darkModeDuration / 3600) * reductionRatio
+        return max(Int((weightedHours * 1000).rounded()), 0)
     }
 
     private static func themeMeta(defaults: UserDefaults, themeId: String) -> (Int, Int) {
@@ -280,7 +281,7 @@ private struct EyeCareWidgetView: View {
                 .lineLimit(1)
                 .minimumScaleFactor(0.7)
 
-            Text(reductionDescription)
+            Text(darkShieldDescription)
                 .font(WidgetTypography.subtitle)
                 .foregroundColor(WidgetPalette.body(colorScheme))
                 .lineLimit(1)
@@ -317,7 +318,7 @@ private struct EyeCareWidgetView: View {
                 )
             }
 
-            Text(reductionDescription)
+            Text(darkShieldDescription)
                 .font(WidgetTypography.subtitle)
                 .foregroundColor(WidgetPalette.body(colorScheme))
                 .lineLimit(1)
@@ -336,8 +337,8 @@ private struct EyeCareWidgetView: View {
                     tint: WidgetPalette.cta
                 )
                 statChip(
-                    title: "蓝光减少",
-                    value: entry.snapshot.estimatedReduction > 0 ? "\(entry.snapshot.estimatedReduction)%" : "--",
+                    title: "暗色保护分",
+                    value: entry.snapshot.darkShieldPoints > 0 ? "\(entry.snapshot.darkShieldPoints) 点" : "--",
                     icon: "sun.max.trianglebadge.exclamationmark",
                     tint: WidgetPalette.info
                 )
@@ -347,9 +348,9 @@ private struct EyeCareWidgetView: View {
         .widgetBackground
     }
 
-    private var reductionDescription: String {
-        entry.snapshot.estimatedReduction > 0
-            ? "蓝光减少约 \(entry.snapshot.estimatedReduction)%"
+    private var darkShieldDescription: String {
+        entry.snapshot.darkShieldPoints > 0
+            ? "今日暗色保护指数 \(entry.snapshot.darkShieldPoints) 点"
             : "开启夜览后自动统计"
     }
 
@@ -449,7 +450,7 @@ struct DarkReaderWidget: Widget {
             EyeCareWidgetView(entry: entry)
         }
         .configurationDisplayName("护眼统计")
-        .description("展示今日护眼时长、本周趋势与蓝光减少估算。")
+        .description("展示今日护眼时长、本周趋势与暗色保护指数。")
         .supportedFamilies([.systemSmall, .systemMedium])
     }
 }

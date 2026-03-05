@@ -54,6 +54,15 @@
   let eyeCareUsageTimer = null;  // 护眼统计上报计时器
   let eyeCareLastTickAt = 0;     // 护眼统计上次计时点
   let pendingEyeCareSeconds = 0; // 待上报累计时长
+  const lowBatteryPolicy = globalThis.DarkReaderLowBatteryPolicy || null;
+  let batteryRef = null;
+  let hasAttachedBatteryListeners = false;
+  const batteryRuntimeState = {
+    forced: false,
+    source: 'disabled',
+    batteryLevel: null,
+    charging: false
+  };
 
   const EYECARE_REPORT_INTERVAL_MS = 30000;
 
@@ -604,6 +613,10 @@ ${cookieSelectors.join(',\n')} {
       sunScheduleSunriseMinute: 0,
       sunScheduleSunsetHour: 18,
       sunScheduleSunsetMinute: 0,
+      lowBatteryEyeCareEnabled: false,
+      lowBatteryThreshold: 20,
+      lowBatteryRestoreOnCharging: true,
+      lowBatteryModeActive: false,
       hideCookieBanners: false,
       siteRules: {}
     };
@@ -618,6 +631,8 @@ ${cookieSelectors.join(',\n')} {
   function shouldActivate() {
     if (isPaused) return false;
     if (!currentConfig) return false;
+    const lowBatteryDecision = evaluateLowBatteryDecision();
+    if (lowBatteryDecision.shouldForceDark) return true;
 
     const siteMode = currentConfig.siteMode || 'smart';
 
@@ -691,6 +706,113 @@ ${cookieSelectors.join(',\n')} {
   function currentDomain() {
     const parts = window.location.hostname.split('.');
     return parts.length > 2 ? parts.slice(-2).join('.') : window.location.hostname;
+  }
+
+  function buildBatterySnapshot() {
+    const supported = typeof navigator.getBattery === 'function';
+    const level = Number.isFinite(batteryRef?.level) ? batteryRef.level : NaN;
+    const available = supported && Number.isFinite(level) && level >= 0 && level <= 1;
+    return {
+      supported,
+      available,
+      level,
+      charging: !!batteryRef?.charging
+    };
+  }
+
+  function evaluateLowBatteryDecision() {
+    if (!currentConfig?.lowBatteryEyeCareEnabled) {
+      batteryRuntimeState.forced = false;
+      batteryRuntimeState.source = 'disabled';
+      batteryRuntimeState.batteryLevel = null;
+      batteryRuntimeState.charging = false;
+      return {
+        shouldForceDark: false,
+        source: 'disabled'
+      };
+    }
+
+    if (!lowBatteryPolicy) {
+      const fallbackActive = !!currentConfig.lowBatteryModeActive;
+      batteryRuntimeState.forced = fallbackActive;
+      batteryRuntimeState.source = 'app_group';
+      batteryRuntimeState.batteryLevel = null;
+      batteryRuntimeState.charging = false;
+      return {
+        shouldForceDark: fallbackActive,
+        source: 'app_group'
+      };
+    }
+
+    const decision = lowBatteryPolicy.evaluateLowBatteryRuntimeState({
+      currentlyForced: batteryRuntimeState.forced,
+      threshold: currentConfig.lowBatteryThreshold,
+      batterySnapshot: buildBatterySnapshot(),
+      restoreOnCharging: currentConfig.lowBatteryRestoreOnCharging !== false,
+      fallbackActive: !!currentConfig.lowBatteryModeActive
+    });
+
+    batteryRuntimeState.forced = !!decision.shouldForceDark;
+    batteryRuntimeState.source = decision.source || 'navigator';
+    batteryRuntimeState.batteryLevel = Number.isFinite(decision.batteryLevel) ? decision.batteryLevel : null;
+    batteryRuntimeState.charging = !!decision.charging;
+    return decision;
+  }
+
+  function detachBatteryListeners() {
+    if (!batteryRef || !hasAttachedBatteryListeners) return;
+    batteryRef.removeEventListener('levelchange', handleBatteryChange);
+    batteryRef.removeEventListener('chargingchange', handleBatteryChange);
+    hasAttachedBatteryListeners = false;
+  }
+
+  function handleBatteryChange() {
+    syncActivationState();
+  }
+
+  async function ensureLowBatteryMonitor() {
+    if (!currentConfig?.lowBatteryEyeCareEnabled) {
+      detachBatteryListeners();
+      batteryRef = null;
+      syncActivationState();
+      return;
+    }
+
+    if (typeof navigator.getBattery !== 'function') {
+      syncActivationState();
+      return;
+    }
+
+    try {
+      if (!batteryRef) {
+        batteryRef = await navigator.getBattery();
+      }
+      if (batteryRef && !hasAttachedBatteryListeners) {
+        batteryRef.addEventListener('levelchange', handleBatteryChange);
+        batteryRef.addEventListener('chargingchange', handleBatteryChange);
+        hasAttachedBatteryListeners = true;
+      }
+    } catch (_) {
+      detachBatteryListeners();
+      batteryRef = null;
+    } finally {
+      syncActivationState();
+    }
+  }
+
+  function syncActivationState() {
+    if (!currentTheme || !currentConfig) return;
+
+    const shouldNowActivate = shouldActivate();
+    if (shouldNowActivate && !isActive) {
+      injectFullStyle(currentTheme);
+      setupMutationObserver();
+    } else if (!shouldNowActivate && isActive) {
+      removeAllStyles();
+      mutationObserver?.disconnect();
+    } else if (shouldNowActivate && isActive && !document.getElementById('__dr_full__')) {
+      injectFullStyle(currentTheme);
+    }
   }
 
   // ============================================================
@@ -886,18 +1008,8 @@ ${cookieSelectors.join(',\n')} {
 
   function setupColorSchemeListener() {
     const darkModeQuery = window.matchMedia('(prefers-color-scheme: dark)');
-    darkModeQuery.addEventListener('change', (e) => {
-      if (currentConfig?.mode === 'auto') {
-        if (e.matches) {
-          // 系统切换到深色模式 → 激活
-          if (currentTheme) injectFullStyle(currentTheme);
-          setupMutationObserver();
-        } else {
-          // 系统切换到浅色模式 → 停用
-          removeAllStyles();
-          mutationObserver?.disconnect();
-        }
-      }
+    darkModeQuery.addEventListener('change', () => {
+      syncActivationState();
     });
   }
 
@@ -923,6 +1035,8 @@ ${cookieSelectors.join(',\n')} {
     // 方案A：visibilitychange 时立即尝试 + 管理轮询状态
     document.addEventListener('visibilitychange', () => {
       if (document.visibilityState === 'visible') {
+        ensureLowBatteryMonitor();
+        syncActivationState();
         refreshThemeFromApp();   // 立即尝试一次
         startThemePolling();     // 确保轮询处于运行状态
         if (isActive && !isPaused) startEyeCareUsageTracker();
@@ -934,6 +1048,8 @@ ${cookieSelectors.join(',\n')} {
 
     // 补充：pageshow 在部分 iOS 场景下比 visibilitychange 更可靠
     window.addEventListener('pageshow', () => {
+      ensureLowBatteryMonitor();
+      syncActivationState();
       if (isActive && !isPaused) {
         refreshThemeFromApp();
         startThemePolling();
@@ -972,7 +1088,7 @@ ${cookieSelectors.join(',\n')} {
    * - 失败时静默忽略，由下一次轮询或事件触发重试
    */
   async function refreshThemeFromApp() {
-    if (!isActive || isPaused || isRefreshingTheme) return;
+    if (isPaused || isRefreshingTheme) return;
     isRefreshingTheme = true;
 
     try {
@@ -986,7 +1102,7 @@ ${cookieSelectors.join(',\n')} {
         new Promise((_, reject) => setTimeout(() => reject(new Error('timeout')), 3000))
       ]);
 
-      if (!result?.theme || !isActive) return;
+      if (!result?.theme) return;
 
       const newTheme = result.theme;
       const newConfig = result.config;
@@ -1008,6 +1124,13 @@ ${cookieSelectors.join(',\n')} {
         (newConfig?.hideCookieBanners ?? false) !== (prevConfig.hideCookieBanners ?? false);
 
       currentConfig = newConfig || currentConfig;
+      await ensureLowBatteryMonitor();
+
+      if (!shouldActivate()) {
+        removeAllStyles();
+        mutationObserver?.disconnect();
+        return;
+      }
 
       if (themeChanged) {
         currentTheme = newTheme;
@@ -1019,6 +1142,8 @@ ${cookieSelectors.join(',\n')} {
       } else if (cookieSettingChanged) {
         applyCookieBannerHiding();
       }
+
+      syncActivationState();
 
     } catch (_) {
       // 超时或通信失败时静默忽略（下次轮询或事件触发时自动重试）
@@ -1049,14 +1174,7 @@ ${cookieSelectors.join(',\n')} {
         if (currentConfig) {
           currentConfig.siteMode = message.mode;
         }
-        const shouldNowActivate = shouldActivate();
-        if (shouldNowActivate && !isActive) {
-          injectFullStyle(currentTheme);
-          setupMutationObserver();
-        } else if (!shouldNowActivate && isActive) {
-          removeAllStyles();
-          mutationObserver?.disconnect();
-        }
+        syncActivationState();
         sendResponse({ ok: true });
         break;
 
@@ -1071,10 +1189,7 @@ ${cookieSelectors.join(',\n')} {
       case 'resume':
         // 恢复深色模式
         isPaused = false;
-        if (currentTheme && shouldActivate()) {
-          injectFullStyle(currentTheme);
-          setupMutationObserver();
-        }
+        syncActivationState();
         sendResponse({ ok: true });
         break;
 
@@ -1100,18 +1215,19 @@ ${cookieSelectors.join(',\n')} {
     try {
       // 读取配置（防闪白样式已在顶部同步注入，此时可以异步加载配置）
       await loadConfig();
+      await ensureLowBatteryMonitor();
 
-      if (!shouldActivate()) {
+      if (shouldActivate()) {
+        // 注入完整深色样式
+        injectFullStyle(currentTheme);
+
+        // 启动 DOM 变化监听（防止 SPA/动态加载产生白块）
+        setupMutationObserver();
+      } else {
         // 不需要深色模式：移除临时防闪白样式，恢复网页原始外观
         removeAllStyles();
-        return;
+        mutationObserver?.disconnect();
       }
-
-      // 注入完整深色样式
-      injectFullStyle(currentTheme);
-
-      // 启动 DOM 变化监听（防止 SPA/动态加载产生白块）
-      setupMutationObserver();
 
       // 监听 SPA 路由变化
       setupSPADetection();

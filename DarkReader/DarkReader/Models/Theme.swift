@@ -13,7 +13,7 @@ import SwiftUI
 
 /// 22 个内置主题按护眼场景分为 6 大类
 enum ThemeCategory: String, Codable, CaseIterable, Identifiable {
-    case eyeCare      = "eye_care"      // 护眼推荐（专为减少蓝光设计）
+    case eyeCare      = "eye_care"      // 护眼推荐（偏柔和对比与暖色）
     case warmLight    = "warm_light"    // 暖光夜间（偏暖色调，夜晚使用）
     case reading      = "reading"       // 阅读专注（均衡对比，长时阅读）
     case oled         = "oled"          // 极简OLED（纯黑背景，节省 OLED 电量）
@@ -297,6 +297,8 @@ extension DarkTheme {
             resource = "zh-Hans"
         case .en:
             resource = "en"
+        case .ja:
+            resource = "ja"
         }
         guard let path = Bundle.main.path(forResource: resource, ofType: "lproj"),
               let bundle = Bundle(path: path) else {
@@ -326,7 +328,7 @@ extension DarkTheme {
 
     static let builtins: [DarkTheme] = [
 
-        // ──── 护眼推荐（eyeCare）·  绿色系，减少蓝光刺激 ────
+        // ──── 护眼推荐（eyeCare）·  绿色系，偏柔和视觉刺激 ────
 
         DarkTheme(
             id: "theme_003",

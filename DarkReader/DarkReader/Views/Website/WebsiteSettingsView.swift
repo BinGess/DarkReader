@@ -28,7 +28,7 @@ struct WebsiteSettingsView: View {
                 .padding(.top, SustainabilityMetrics.pageTopPadding)
                 .padding(.bottom, SustainabilityMetrics.pageBottomPadding)
             }
-            .font(SustainabilityTypography.body)
+            .sustainabilityReadableContent()
         }
         .navigationTitle("网站设置")
         .navigationBarTitleDisplayMode(.inline)
@@ -177,7 +177,7 @@ struct WebsiteSettingDetailView: View {
                 .padding(.top, SustainabilityMetrics.pageTopPadding)
                 .padding(.bottom, 98)
             }
-            .font(SustainabilityTypography.body)
+            .sustainabilityReadableContent()
         }
         .navigationTitle("网站设置")
         .navigationBarTitleDisplayMode(.inline)
@@ -554,7 +554,7 @@ struct WebsiteSettingDetailView: View {
                     }
                 }
             }
-            .font(SustainabilityTypography.body)
+            .sustainabilityReadableContent()
             .tint(SustainabilityPalette.primary)
             .navigationTitle("主题颜色")
             .navigationBarTitleDisplayMode(.inline)

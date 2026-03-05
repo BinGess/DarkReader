@@ -40,7 +40,7 @@ struct SettingsView: View {
                 .padding(.top, SustainabilityMetrics.pageTopPadding)
                 .padding(.bottom, SustainabilityMetrics.pageBottomPadding)
             }
-            .font(SustainabilityTypography.body)
+            .sustainabilityReadableContent()
         }
         .navigationTitle("Settings")
         .navigationBarTitleDisplayMode(.inline)
@@ -176,7 +176,7 @@ struct SettingsView: View {
                         VStack(alignment: .leading, spacing: 2) {
                             Text("每日护眼报告")
                                 .font(SustainabilityTypography.bodyStrong)
-                            Text("按固定时间推送今日护眼时长与蓝光估算。")
+                            Text("按固定时间推送今日护眼时长与暗色保护分。")
                                 .font(SustainabilityTypography.caption)
                                 .foregroundColor(.secondary)
                         }

@@ -32,7 +32,7 @@ struct ScheduleView: View {
                 .padding(.top, SustainabilityMetrics.pageTopPadding)
                 .padding(.bottom, SustainabilityMetrics.pageBottomPadding)
             }
-            .font(SustainabilityTypography.body)
+            .sustainabilityReadableContent()
         }
         .navigationTitle("智能定时")
         .navigationBarTitleDisplayMode(.inline)

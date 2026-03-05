@@ -65,7 +65,7 @@ struct GuideCenterView: View {
                     .padding(.top, SustainabilityMetrics.pageTopPadding)
                     .padding(.bottom, SustainabilityMetrics.pageBottomPadding)
                 }
-                .font(SustainabilityTypography.body)
+                .sustainabilityReadableContent()
             }
             .navigationTitle("指南")
             .navigationBarTitleDisplayMode(.inline)
@@ -484,7 +484,7 @@ private struct GuideScaffold<Content: View>: View {
                 .padding(.top, SustainabilityMetrics.pageTopPadding)
                 .padding(.bottom, SustainabilityMetrics.pageBottomPadding)
             }
-            .font(SustainabilityTypography.body)
+            .sustainabilityReadableContent()
         }
     }
 }

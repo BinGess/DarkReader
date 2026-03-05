@@ -231,6 +231,12 @@ private struct LaunchSplashView: View {
                 Text(LocalizedStringKey("brand.appName"))
                     .font(.system(size: 30, weight: .bold, design: .rounded))
                     .foregroundColor(isNight ? .white : .primary)
+
+                Text(LocalizedStringKey("launch.tagline"))
+                    .font(.system(size: 14, weight: .medium, design: .rounded))
+                    .foregroundColor((isNight ? Color.white : Color.primary).opacity(0.86))
+                    .multilineTextAlignment(.center)
+                    .padding(.horizontal, 24)
             }
         }
         .animation(.easeInOut(duration: 1.2), value: isNight)
