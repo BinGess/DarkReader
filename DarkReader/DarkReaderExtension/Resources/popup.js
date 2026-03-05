@@ -23,21 +23,22 @@ let eyeCareSummary = { durationSeconds: 0, darkShieldPoints: 0 };
 let currentLanguage = 'zhHans';
 const SUPPORT_EMAIL = 'baibin1989@gmail.com';
 const POPUP_LANGUAGE_STORAGE_KEY = 'popupLanguage';
+const eyeCareSummaryFormatter = globalThis.DarkReaderPopupEyeCareSummary || null;
 
 const I18N = {
   zhHans: {
-    brandName: '护眼模式',
+    brandName: '夜览',
     hero: {
-      panelAria: '护眼模式当前站点控制面板',
-      status: '护眼模式正在开启中：'
+      panelAria: '夜览当前站点控制面板',
+      status: '夜览正在开启中：'
     },
     pause: {
       title: '暂停或恢复当前站点',
-      banner: '护眼模式已暂停。',
+      banner: '夜览已暂停。',
       resume: '恢复'
     },
     labels: {
-      mode: '护眼模式',
+      mode: '夜览',
       theme: '护眼主题'
     },
     mode: {
@@ -71,7 +72,7 @@ const I18N = {
       submit: '提交反馈',
       submitting: '提交中...',
       emailOpened: '已打开邮件',
-      mailSubjectPrefix: '[护眼模式] 问题反馈',
+      mailSubjectPrefix: '[夜览] 问题反馈',
       mailGreeting: '你好，以下是用户提交的问题反馈：',
       mailSite: '网站',
       mailTheme: '主题',
@@ -85,18 +86,18 @@ const I18N = {
     }
   },
   en: {
-    brandName: 'Eye-care Mode',
+    brandName: 'NightGuard',
     hero: {
-      panelAria: 'Eye-care mode current site control panel',
-      status: 'Eye-care mode is currently active.'
+      panelAria: 'NightGuard current site control panel',
+      status: 'NightGuard is currently active.'
     },
     pause: {
       title: 'Pause or resume current site',
-      banner: 'Eye-care mode is paused on this site.',
+      banner: 'NightGuard is paused on this site.',
       resume: 'Resume'
     },
     labels: {
-      mode: 'Eye-care Mode',
+      mode: 'NightGuard',
       theme: 'Eye-care Theme'
     },
     mode: {
@@ -130,7 +131,7 @@ const I18N = {
       submit: 'Submit Feedback',
       submitting: 'Submitting...',
       emailOpened: 'Email Opened',
-      mailSubjectPrefix: '[Eye-care Mode] Issue Feedback',
+      mailSubjectPrefix: '[NightGuard] Issue Feedback',
       mailGreeting: 'Hi, here is a user issue report:',
       mailSite: 'Site',
       mailTheme: 'Theme',
@@ -144,18 +145,18 @@ const I18N = {
     }
   },
   ja: {
-    brandName: 'アイケアモード',
+    brandName: 'ナイトガード',
     hero: {
-      panelAria: 'アイケアモードの現在サイトコントロールパネル',
-      status: 'アイケアモードは現在有効です。'
+      panelAria: 'ナイトガードの現在サイトコントロールパネル',
+      status: 'ナイトガードは現在有効です。'
     },
     pause: {
       title: 'このサイトを一時停止または再開',
-      banner: 'このサイトではアイケアモードが一時停止中です。',
+      banner: 'このサイトではナイトガードが一時停止中です。',
       resume: '再開'
     },
     labels: {
-      mode: 'アイケアモード',
+      mode: 'ナイトガード',
       theme: 'アイケアテーマ'
     },
     mode: {
@@ -189,7 +190,7 @@ const I18N = {
       submit: 'フィードバック送信',
       submitting: '送信中...',
       emailOpened: 'メールを開きました',
-      mailSubjectPrefix: '[アイケアモード] 問題フィードバック',
+      mailSubjectPrefix: '[ナイトガード] 問題フィードバック',
       mailGreeting: 'こんにちは。ユーザーからの問題報告です:',
       mailSite: 'サイト',
       mailTheme: 'テーマ',
@@ -405,8 +406,8 @@ async function loadEyeCareSummary() {
   try {
     const result = await browser.runtime.sendMessage({ action: 'getEyeCareSummary' });
     eyeCareSummary = {
-      durationSeconds: Number(result?.durationSeconds || 0),
-      darkShieldPoints: Number(result?.darkShieldPoints || 0)
+      durationSeconds: normalizeDurationSeconds(result?.durationSeconds),
+      darkShieldPoints: normalizeShieldPoints(result?.darkShieldPoints)
     };
   } catch (_) {
     eyeCareSummary = { durationSeconds: 0, darkShieldPoints: 0 };
@@ -414,23 +415,52 @@ async function loadEyeCareSummary() {
 }
 
 function renderEyeCareSummary() {
-  const rawDuration = Number.isFinite(eyeCareSummary.durationSeconds)
-    ? Math.max(eyeCareSummary.durationSeconds, 0)
-    : 0;
-  const rawShieldPoints = Number.isFinite(eyeCareSummary.darkShieldPoints)
-    ? Math.max(Math.trunc(eyeCareSummary.darkShieldPoints), 0)
-    : 0;
-  const shouldApplyMinimum = !isPaused && currentMode !== 'off';
+  const display = buildEyeCareDisplay({
+    durationSeconds: eyeCareSummary.durationSeconds,
+    darkShieldPoints: eyeCareSummary.darkShieldPoints,
+    isActiveOnPage,
+    isPaused,
+    reductionSuffix: t('stats.reductionSuffix')
+  });
 
-  const safeDuration = shouldApplyMinimum
-    ? Math.max(rawDuration, 60)
-    : rawDuration;
-  const safeShieldPoints = shouldApplyMinimum
-    ? Math.max(rawShieldPoints, 1)
-    : rawShieldPoints;
+  setText('eyeCareDurationValue', display.durationText);
+  setText('eyeCareReductionValue', display.reductionText);
+}
 
-  setText('eyeCareDurationValue', formatDuration(safeDuration));
-  setText('eyeCareReductionValue', `${safeShieldPoints} ${t('stats.reductionSuffix')}`);
+function normalizeDurationSeconds(value) {
+  if (eyeCareSummaryFormatter?.normalizeNonNegativeNumber) {
+    return eyeCareSummaryFormatter.normalizeNonNegativeNumber(value);
+  }
+  const parsed = typeof value === 'number' ? value : Number(value);
+  if (!Number.isFinite(parsed) || parsed <= 0) {
+    return 0;
+  }
+  return parsed;
+}
+
+function normalizeShieldPoints(value) {
+  if (eyeCareSummaryFormatter?.normalizeShieldPoints) {
+    return eyeCareSummaryFormatter.normalizeShieldPoints(value);
+  }
+  return Math.max(Math.trunc(normalizeDurationSeconds(value)), 0);
+}
+
+function buildEyeCareDisplay(payload) {
+  if (eyeCareSummaryFormatter?.buildEyeCareSummaryDisplay) {
+    return eyeCareSummaryFormatter.buildEyeCareSummaryDisplay(payload);
+  }
+
+  const rawDuration = normalizeDurationSeconds(payload?.durationSeconds);
+  const rawShieldPoints = normalizeShieldPoints(payload?.darkShieldPoints);
+  const shouldApplyMinimum = payload?.isActiveOnPage === true && payload?.isPaused !== true;
+  const safeDuration = shouldApplyMinimum ? Math.max(rawDuration, 60) : rawDuration;
+  const safeShieldPoints = shouldApplyMinimum ? Math.max(rawShieldPoints, 1) : rawShieldPoints;
+  const suffix = typeof payload?.reductionSuffix === 'string' ? payload.reductionSuffix.trim() : '';
+
+  return {
+    durationText: formatDuration(safeDuration),
+    reductionText: suffix ? `${safeShieldPoints} ${suffix}` : String(safeShieldPoints)
+  };
 }
 
 function bindEvents() {
@@ -487,7 +517,7 @@ function bindEvents() {
   document.getElementById('openAppBtn').addEventListener('click', async () => {
     // ★ 唤起主 App 的标准方式：让当前标签页导航到自定义 URL Scheme。
     //   Safari 拦截到 darkreader:// 后，会弹出系统对话框
-    //   "Safari 要打开 AutoDark" → 用户点"打开" → 主 App 启动并跳转到设置页。
+    //   "Safari 要打开 NightGuard" → 用户点"打开" → 主 App 启动并跳转到设置页。
     //
     //   注意：不能用 window.location.href（popup 内部跳转无效）；
     //         不能用 sendNativeMessage（iOS Safari 扩展进程无法直接调用 UIApplication.open）；

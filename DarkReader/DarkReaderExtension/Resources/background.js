@@ -299,9 +299,9 @@ async function getThemeById(themeId) {
 function syncActionTitle(appLanguageRaw) {
   let title = '夜览';
   if (appLanguageRaw === 'en') {
-    title = 'AutoDark';
+    title = 'NightGuard';
   } else if (appLanguageRaw === 'ja') {
-    title = 'アイケアモード';
+    title = 'ナイトガード';
   }
   browser.action.setTitle({ title }).catch(() => {});
 }

@@ -1,11 +1,11 @@
-/* English localization for AutoDark */
+/* English localization for NightGuard */
 "1. 确认扩展已在 Safari 设置 > 扩展 中启用。\n2. 检查全局开关是否为「始终开启」或「跟随系统」（系统需为深色模式）。\n3. 尝试刷新当前网页。\n4. 重启 Safari 后再试。" = "1. Make sure the extension is enabled in Safari Settings > Extensions.\n2. Check whether the global switch is set to \"Always On\" or \"Follow System\" (system must be in dark mode).\n3. Try refreshing the current page.\n4. Restart Safari and try again.";
-"DarkReader 不收集、不上传任何用户数据。所有网页解析、颜色计算均在您的设备本地完成，不会发送到任何服务器。" = "AutoDark does not collect or upload any user data. All webpage parsing and color computation happen locally on your device.";
-"DarkReader 预览" = "AutoDark Preview";
+"DarkReader 不收集、不上传任何用户数据。所有网页解析、颜色计算均在您的设备本地完成，不会发送到任何服务器。" = "NightGuard does not collect or upload any user data. All webpage parsing and color computation happen locally on your device.";
+"DarkReader 预览" = "NightGuard Preview";
 "Payment Gateway 风格的护眼浏览体验" = "Payment-gateway style eye-comfort browsing";
 "Safari 扩展需要「访问所有网站」权限，以便在您浏览时注入深色样式。扩展仅读取网页的 CSS 样式信息用于计算颜色，不读取任何网页文本内容，不记录您的浏览历史。" = "The Safari extension needs “Access All Websites” permission to inject dark styles while browsing. It only reads CSS style info for color computation, not page text or browsing history.";
-"[DarkReader] 无法打开扩展设置：\\(error)" = "[AutoDark] Failed to open extension settings: \\(error)";
-"brand.appName" = "AutoDark";
+"[DarkReader] 无法打开扩展设置：\\(error)" = "[NightGuard] Failed to open extension settings: \\(error)";
+"brand.appName" = "NightGuard";
 "launch.tagline" = "Protect your eyes at every moment";
 "darkmode.desc.auto" = "Automatically enable when the system switches to dark mode";
 "darkmode.desc.off" = "Disable the extension and keep original website styles";
@@ -63,7 +63,7 @@
 "themeEditor.colorError" = "Insufficient contrast between primary text and background (current %.2f:1). Please adjust colors.";
 "themeEditor.contrastLabel" = "Primary text contrast: %.2f:1 (recommended ≥ 4.5:1)";
 "themeEditor.nameRequired" = "Theme name cannot be empty";
-"themeEditor.preview.title" = "AutoDark Preview";
+"themeEditor.preview.title" = "NightGuard Preview";
 "website.currentThemeFormat" = "Current: %@";
 "website.dedicatedTheme.hint" = "When enabled, \"%@ Site Theme\" will be used.";
 "website.dedicatedTheme.name" = "%@ Site Theme";
@@ -105,7 +105,7 @@
 "代码雨" = "Code Rain";
 "余烬" = "Ember";
 "作者作品" = "Author Picks";
-"使用 DarkReader 完全不需要注册账户或提供任何个人信息。" = "Using AutoDark does not require account registration or personal information.";
+"使用 DarkReader 完全不需要注册账户或提供任何个人信息。" = "Using NightGuard does not require account registration or personal information.";
 "例如 news、论坛、文档站等。" = "For example: news sites, forums, docs sites.";
 "保存" = "Save";
 "保留图片细节" = "Preserve image details";
@@ -190,11 +190,11 @@
 "应用设置" = "Apply Settings";
 "建议先访问 1-2 个常用网站，再回来配置。" = "Visit 1–2 frequently used sites first, then return to configure.";
 "开启" = "On";
-"开启 DarkReader 扩展" = "Enable AutoDark Extension";
+"开启 DarkReader 扩展" = "Enable NightGuard Extension";
 "开启图片优化" = "Enable image optimization";
 "开始引导" = "Start Guide";
 "异常诊断" = "Diagnostics";
-"强制使用 DarkReader 规则，保持跨站点一致体验。" = "Force AutoDark rules for consistent cross-site experience.";
+"强制使用 DarkReader 规则，保持跨站点一致体验。" = "Force NightGuard rules for consistent cross-site experience.";
 "强制关闭" = "Force Off";
 "强制开启" = "Force On";
 "当前站点独立颜色效果" = "Current site-specific color effect";
@@ -215,7 +215,7 @@
 "扩展安装后没有效果？" = "Extension installed but no effect?";
 "扩展未启用" = "Extension Not Enabled";
 "扩展连接与全局深色策略" = "Extension connection and global dark strategy";
-"找到 DarkReader 并打开开关，允许扩展在网站上运行。" = "Find AutoDark and turn it on to allow the extension to run on websites.";
+"找到 DarkReader 并打开开关，允许扩展在网站上运行。" = "Find NightGuard and turn it on to allow the extension to run on websites.";
 "找到渲染策略相关开关。" = "Find rendering strategy toggles.";
 "护眼绿" = "Eye-care Green";
 "指南" = "Guides";
@@ -331,7 +331,7 @@
 "语言" = "Language";
 "说明文字" = "Supporting text";
 "说明文字、时间戳等" = "Secondary text, timestamps, etc.";
-"请在 Safari 扩展设置中开启 DarkReader，才能将策略应用到网页。" = "Please enable AutoDark in Safari extension settings to apply strategy to web pages.";
+"请在 Safari 扩展设置中开启 DarkReader，才能将策略应用到网页。" = "Please enable NightGuard in Safari extension settings to apply strategy to web pages.";
 "赤橘" = "Blood Orange";
 "超链接与强调元素" = "Links and highlighted elements";
 "超链接和强调元素" = "Hyperlinks and highlighted elements";
@@ -341,7 +341,7 @@
 "输入主题名称（最多15字）" = "Enter theme name (up to 15 chars)";
 "边框颜色" = "Border Color";
 "返回指南" = "Back to Guides";
-"返回网页后，看到扩展图标即表示 DarkReader 已成功启用。" = "After returning to the webpage, seeing the extension icon means AutoDark is enabled.";
+"返回网页后，看到扩展图标即表示 DarkReader 已成功启用。" = "After returning to the webpage, seeing the extension icon means NightGuard is enabled.";
 "这些会覆盖全局设置" = "These override global settings";
 "这将删除所有自定义主题和站点规则，恢复默认设置。此操作不可撤销。" = "This will delete all custom themes and site rules, and restore defaults. This action cannot be undone.";
 "这是一段示例正文内容，展示深色模式下文字的可读性和舒适度。" = "This is sample body text showing readability and comfort in dark mode.";
@@ -350,7 +350,7 @@
 "进入设置页面，点击「清除所有数据」即可删除本地存储的所有配置。如已开启 iCloud 同步，iCloud 端的数据需在 iPhone 设置 > Apple ID > iCloud > 管理储存 中手动删除。" = "Go to Settings and tap \"Clear All Data\" to remove all local configurations. If iCloud sync is enabled, remove iCloud data manually in iPhone Settings > Apple ID > iCloud > Manage Storage.";
 "进入首页的设置面板。" = "Open the settings panel on the home screen.";
 "进入高级策略" = "Open Advanced Strategy";
-"选择 DarkReader" = "Choose AutoDark";
+"选择 DarkReader" = "Choose NightGuard";
 "选择始终允许" = "Choose Always Allow";
 "选择管理扩展" = "Choose Manage Extensions";
 "通过图片优化策略降低刺眼感，同时保留主要内容可读性。" = "Reduce glare via image optimization while keeping key content readable.";
@@ -409,7 +409,7 @@
 "周报日" = "Weekly Report Day";
 "周维度报告" = "Weekly Report";
 "在自动模式下按触发源切换深色" = "Switch dark mode by trigger source in Auto mode";
-"夜览 · 护眼深色阅读" = "AutoDark · Eye-care Dark Reading";
+"夜览 · 护眼深色阅读" = "NightGuard · Eye-care Dark Reading";
 "实时" = "Real-time";
 "将跟随系统深色模式" = "Will follow system dark mode";
 "尚未获取当地日落日出，请授权定位后自动计算。" = "Local sunrise/sunset unavailable. Grant location permission for automatic calculation.";
@@ -445,7 +445,7 @@
 "触发策略" = "Trigger Strategy";
 "设置一次，自动护眼" = "Set once, auto eye-care";
 "详细报告" = "Detailed Report";
-"请在 Safari 扩展设置中开启夜览，策略才能应用到网页。" = "Enable AutoDark in Safari extension settings so strategy can apply to webpages.";
+"请在 Safari 扩展设置中开启夜览，策略才能应用到网页。" = "Enable NightGuard in Safari extension settings so strategy can apply to webpages.";
 "调节整体页面明暗，不影响主题颜色" = "Adjust overall page brightness without affecting theme colors.";
 "跟随系统" = "Follow System";
 "近 7 天趋势" = "Last 7-day Trend";

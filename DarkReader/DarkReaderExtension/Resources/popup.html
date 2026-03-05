@@ -3,14 +3,14 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>护眼模式</title>
+  <title>夜览</title>
   <link rel="stylesheet" href="popup.css">
 </head>
 <body>
   <main class="popup-shell">
-    <header id="heroCard" class="hero-card" aria-label="AutoDark control panel">
+    <header id="heroCard" class="hero-card" aria-label="夜览控制面板">
       <div class="hero-top">
-        <p id="heroStatusText" class="hero-status-text">护眼模式正在开启中：</p>
+        <p id="heroStatusText" class="hero-status-text">夜览正在开启中：</p>
         <button id="pauseBtn" class="icon-btn" title="暂停或恢复当前站点" aria-label="暂停或恢复当前站点" aria-pressed="false">
           <svg class="pause-icon pause-icon-pause" viewBox="0 0 24 24" aria-hidden="true">
             <path d="M8 5h3v14H8zM13 5h3v14h-3z"></path>
@@ -41,12 +41,12 @@
     </header>
 
     <section id="pauseBanner" class="pause-banner hidden" role="status" aria-live="polite">
-      <span id="pauseBannerText">护眼模式已暂停。</span>
+      <span id="pauseBannerText">夜览已暂停。</span>
       <button id="resumeBtn" class="text-btn">恢复</button>
     </section>
 
     <section class="panel">
-      <label id="modeLabel" class="control-label">护眼模式</label>
+      <label id="modeLabel" class="control-label">夜览</label>
       <div class="segmented-control" id="modeControl">
         <button class="seg-btn" data-value="system">跟随系统</button>
         <button class="seg-btn" data-value="on">始终开启</button>
@@ -87,6 +87,7 @@
     </section>
   </main>
 
+  <script src="popupEyeCareSummary.js"></script>
   <script src="popup.js"></script>
 </body>
 </html>
