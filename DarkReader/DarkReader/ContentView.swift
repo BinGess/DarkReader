@@ -2,7 +2,7 @@
 //  ContentView.swift
 //  DarkReader
 //
-//  主界面：单页首页，主题/设置通过弹层打开
+//  主界面：单页首页，主题/设置通过导航跳转
 //
 
 import SwiftUI
@@ -10,22 +10,16 @@ import SwiftUI
 struct ContentView: View {
     @EnvironmentObject var dataManager: SharedDataManager
     @EnvironmentObject var appNavigation: AppNavigationState
-    @State private var activeSheet: ActiveSheet?
-
-    private enum ActiveSheet: String, Identifiable {
-        case themes
-        case settings
-
-        var id: String { rawValue }
-    }
+    @State private var showThemesPage = false
+    @State private var showSettingsPage = false
 
     var body: some View {
         ZStack {
             SustainabilityBackground()
 
             DashboardView(
-                onOpenThemes: { activeSheet = .themes },
-                onOpenSettings: { activeSheet = .settings }
+                showThemesPage: $showThemesPage,
+                showSettingsPage: $showSettingsPage
             )
             .font(SustainabilityTypography.body)
             .background(Color.clear)
@@ -33,14 +27,6 @@ struct ContentView: View {
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .tint(SustainabilityPalette.cta)
         .sustainabilityChrome()
-        .sheet(item: $activeSheet) { sheet in
-            switch sheet {
-            case .themes:
-                ThemeManagerView()
-            case .settings:
-                SettingsView()
-            }
-        }
         .onAppear {
             handleRoute(appNavigation.selectedTab)
         }
@@ -52,9 +38,9 @@ struct ContentView: View {
     private func handleRoute(_ target: Int) {
         switch target {
         case 1:
-            activeSheet = .themes
+            showThemesPage = true
         case 2:
-            activeSheet = .settings
+            showSettingsPage = true
         default:
             return
         }

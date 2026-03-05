@@ -91,7 +91,7 @@ async function getConfigForDomain(domain, skipCache = false) {
       dimImages: true,
       ignoreNativeDarkMode: false,
       appLanguage: lastKnownAppLanguage,
-      siteMode: 'follow',
+      siteMode: 'smart',
       siteThemeId: '',
       scheduleEnabled: false,
       scheduleTriggerSource: 'manual',
@@ -162,7 +162,7 @@ browser.runtime.onMessage.addListener((message, sender, sendResponse) => {
       ).then(() => {
         invalidateCache(domain);
         // 通知当前标签页的 content.js 刷新
-        notifyActiveTab({ action: 'setMode', mode: rule.mode || 'follow' });
+        notifyActiveTab({ action: 'setMode', mode: rule.mode || 'smart' });
         if (rule.themeId) {
           getThemeById(rule.themeId).then(theme => {
             if (theme) notifyActiveTab({ action: 'applyTheme', theme });
@@ -222,6 +222,22 @@ browser.runtime.onMessage.addListener((message, sender, sendResponse) => {
         { action: 'getThemes' }
       ).then(result => sendResponse(result))
        .catch(() => sendResponse({ themes: [] }));
+      return true;
+    }
+
+    // popup.js 请求首页同源的护眼报告摘要
+    case 'getEyeCareSummary': {
+      browser.runtime.sendNativeMessage(
+        'com.timmy.darkreader.extension',
+        { action: 'getEyeCareSummary' }
+      ).then(result => {
+        sendResponse({
+          durationSeconds: Number(result?.durationSeconds || 0),
+          reductionPercent: Number(result?.reductionPercent || 0)
+        });
+      }).catch(() => {
+        sendResponse({ durationSeconds: 0, reductionPercent: 0 });
+      });
       return true;
     }
 

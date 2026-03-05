@@ -59,7 +59,11 @@ struct SiteRule: Codable, Equatable {
 
     init(from decoder: Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
-        self.mode = try container.decodeIfPresent(SiteMode.self, forKey: .mode)
+        if let modeRaw = try container.decodeIfPresent(String.self, forKey: .mode) {
+            self.mode = SiteMode(rawValue: modeRaw) ?? .smart
+        } else {
+            self.mode = nil
+        }
         self.themeId = try container.decodeIfPresent(String.self, forKey: .themeId)
         self.updatedAt = try container.decodeIfPresent(Date.self, forKey: .updatedAt) ?? Date(timeIntervalSince1970: 0)
         self.brightness = min(max(try container.decodeIfPresent(Double.self, forKey: .brightness) ?? 1.0, 0.5), 1.5)
@@ -78,19 +82,27 @@ struct SiteRule: Codable, Equatable {
     }
 }
 
-// 站点级别的模式选项（比全局多一个 "跟随默认"）
+// 站点级别模式（四档 + 兼容历史 follow）
 enum SiteMode: String, Codable, CaseIterable, Identifiable {
-    case follow = "follow"  // 跟随全局设置
+    case follow = "follow"  // 兼容历史：旧版“跟随全局设置”
+    case system = "system"  // 跟随系统外观
     case on     = "on"      // 强制开启深色模式
     case off    = "off"     // 强制关闭深色模式
+    case smart  = "smart"   // 智能开启（按定时规则 / 系统）
 
     var id: String { rawValue }
 
+    static var allCases: [SiteMode] {
+        [.system, .on, .off, .smart]
+    }
+
     var displayNameKey: String {
         switch self {
-        case .follow: return "sitemode.option.follow"
+        case .follow: return "sitemode.option.smart"
+        case .system: return "sitemode.option.system"
         case .on:     return "sitemode.option.on"
         case .off:    return "sitemode.option.off"
+        case .smart:  return "sitemode.option.smart"
         }
     }
 
@@ -100,9 +112,11 @@ enum SiteMode: String, Codable, CaseIterable, Identifiable {
 
     var systemImageName: String {
         switch self {
-        case .follow: return "arrow.up.arrow.down.circle"
+        case .follow: return "sparkles"
+        case .system: return "circle.lefthalf.filled"
         case .on:     return "moon.fill"
         case .off:    return "sun.max.fill"
+        case .smart:  return "sparkles"
         }
     }
 }

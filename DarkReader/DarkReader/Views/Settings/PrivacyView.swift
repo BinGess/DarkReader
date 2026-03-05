@@ -15,7 +15,7 @@ struct PrivacyView: View {
             ZStack {
                 SustainabilityBackground()
                 ScrollView {
-                    VStack(alignment: .leading, spacing: 12) {
+                    VStack(alignment: .leading, spacing: SustainabilityMetrics.sectionGap) {
                         privacySection(
                             icon: "lock.shield.fill",
                             color: SustainabilityPalette.success,
@@ -51,7 +51,9 @@ struct PrivacyView: View {
                             content: "使用 DarkReader 完全不需要注册账户或提供任何个人信息。"
                         )
                     }
-                    .padding(16)
+                    .padding(.horizontal, SustainabilityMetrics.pageHorizontalPadding)
+                    .padding(.top, SustainabilityMetrics.pageTopPadding)
+                    .padding(.bottom, SustainabilityMetrics.pageBottomPadding)
                 }
                 .font(SustainabilityTypography.body)
             }
@@ -138,7 +140,14 @@ struct HelpView: View {
                             .sustainabilityInteractiveRow()
                         }
                         .listRowBackground(Color.clear)
-                        .listRowInsets(EdgeInsets(top: 6, leading: 16, bottom: 6, trailing: 16))
+                        .listRowInsets(
+                            EdgeInsets(
+                                top: SustainabilityMetrics.listRowInsetVertical,
+                                leading: SustainabilityMetrics.listRowInsetHorizontal,
+                                bottom: SustainabilityMetrics.listRowInsetVertical,
+                                trailing: SustainabilityMetrics.listRowInsetHorizontal
+                            )
+                        )
                         .listRowSeparator(.hidden)
                     }
                 }

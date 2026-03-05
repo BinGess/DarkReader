@@ -21,68 +21,72 @@ struct ThemeManagerView: View {
     ]
 
     var body: some View {
-        NavigationView {
-            ZStack {
-                SustainabilityBackground()
+        ZStack {
+            SustainabilityBackground()
 
-                ScrollView {
-                    VStack(alignment: .leading, spacing: 16) {
-                        // 当前激活主题大展示卡
-                        activeThemeShowcase
-                            .padding(.horizontal)
-                            .padding(.top, 8)
+            ScrollView {
+                VStack(alignment: .leading, spacing: SustainabilityMetrics.sectionGap) {
+                    // 当前激活主题大展示卡
+                    activeThemeShowcase
+                        .padding(.horizontal, SustainabilityMetrics.pageHorizontalPadding)
+                        .padding(.top, SustainabilityMetrics.pageTopPadding - 4)
 
-                        // 内置主题网格
-                        sectionHeader("内置主题")
-                            .padding(.horizontal)
+                    // 内置主题网格
+                    sectionHeader("内置主题")
+                        .padding(.horizontal, SustainabilityMetrics.pageHorizontalPadding)
+                    LazyVGrid(columns: columns, spacing: 12) {
+                        ForEach(dataManager.themes.filter { $0.isBuiltin }) { theme in
+                            ThemeCard(
+                                theme: theme,
+                                isDefault: theme.id == dataManager.globalConfig.defaultThemeId,
+                                appLanguage: dataManager.globalConfig.appLanguage,
+                                onSetDefault: { setDefault(theme) },
+                                onEdit: {
+                                    editingTheme = theme
+                                    showEditor = true
+                                },
+                                onDelete: nil
+                            )
+                        }
+                    }
+                    .padding(.horizontal, SustainabilityMetrics.pageHorizontalPadding)
+
+                    // 自定义主题网格（有时才显示）
+                    let customThemes = dataManager.themes
+                        .filter { !$0.isBuiltin }
+                        .sorted { $0.updatedAt > $1.updatedAt }
+                    if !customThemes.isEmpty {
+                        sectionHeader("自定义主题")
+                            .padding(.horizontal, SustainabilityMetrics.pageHorizontalPadding)
                         LazyVGrid(columns: columns, spacing: 12) {
-                            ForEach(dataManager.themes.filter { $0.isBuiltin }) { theme in
+                            ForEach(customThemes) { theme in
                                 ThemeCard(
                                     theme: theme,
                                     isDefault: theme.id == dataManager.globalConfig.defaultThemeId,
                                     appLanguage: dataManager.globalConfig.appLanguage,
                                     onSetDefault: { setDefault(theme) },
-                                    onEdit: { editTheme(theme) },
-                                    onDelete: nil
+                                    onEdit: {
+                                        editingTheme = theme
+                                        showEditor = true
+                                    },
+                                    onDelete: { requestDelete(theme) }
                                 )
                             }
                         }
-                        .padding(.horizontal)
-
-                        // 自定义主题网格（有时才显示）
-                        let customThemes = dataManager.themes
-                            .filter { !$0.isBuiltin }
-                            .sorted { $0.updatedAt > $1.updatedAt }
-                        if !customThemes.isEmpty {
-                            sectionHeader("自定义主题")
-                                .padding(.horizontal)
-                            LazyVGrid(columns: columns, spacing: 12) {
-                                ForEach(customThemes) { theme in
-                                    ThemeCard(
-                                        theme: theme,
-                                        isDefault: theme.id == dataManager.globalConfig.defaultThemeId,
-                                        appLanguage: dataManager.globalConfig.appLanguage,
-                                        onSetDefault: { setDefault(theme) },
-                                        onEdit: { editTheme(theme) },
-                                        onDelete: { requestDelete(theme) }
-                                    )
-                                }
-                            }
-                            .padding(.horizontal)
-                        }
-
-                        Spacer(minLength: 24)
+                        .padding(.horizontal, SustainabilityMetrics.pageHorizontalPadding)
                     }
-                    .padding(.bottom, 90)
+
+                    Spacer(minLength: 24)
                 }
-                .font(SustainabilityTypography.body)
+                .padding(.bottom, 90)
             }
-            .overlay(alignment: .bottomTrailing) {
-                floatingAddButton
-            }
-            .navigationTitle("主题")
-            .navigationBarTitleDisplayMode(.inline)
+            .font(SustainabilityTypography.body)
         }
+        .overlay(alignment: .bottomTrailing) {
+            floatingAddButton
+        }
+        .navigationTitle("主题")
+        .navigationBarTitleDisplayMode(.inline)
         .sustainabilityChrome()
         .sheet(isPresented: $showEditor) {
             ThemeEditorView(existingTheme: editingTheme)
@@ -183,7 +187,7 @@ struct ThemeManagerView: View {
                 .frame(width: 20, height: 20)
                 .overlay(Circle().stroke(Color.white.opacity(0.3), lineWidth: 0.5))
             Text(label)
-                .font(.system(size: 9))
+                .font(.system(size: 10, weight: .regular, design: .rounded))
                 .foregroundColor((Color(hex: "#e0e0e0") ?? .white).opacity(0.7))
         }
     }
@@ -191,7 +195,7 @@ struct ThemeManagerView: View {
     private func statChip(icon: String, label: String, color: Color) -> some View {
         HStack(spacing: 5) {
             Image(systemName: icon)
-                .font(.system(size: 11))
+                .font(SustainabilityTypography.caption)
                 .foregroundColor(color)
             Text(label)
                 .font(SustainabilityTypography.caption)
@@ -223,7 +227,7 @@ struct ThemeManagerView: View {
                         .font(.system(size: 24, weight: .bold))
                         .foregroundColor(.white)
                 }
-                .shadow(color: Color.black.opacity(0.25), radius: 12, x: 0, y: 6)
+                .shadow(color: Color.black.opacity(0.2), radius: 9, x: 0, y: 4)
                 .padding(.trailing, 20)
                 .padding(.bottom, 20)
         }
@@ -233,11 +237,6 @@ struct ThemeManagerView: View {
     private func setDefault(_ theme: DarkTheme) {
         dataManager.globalConfig.defaultThemeId = theme.id
         dataManager.saveConfig()
-    }
-
-    private func editTheme(_ theme: DarkTheme) {
-        editingTheme = theme
-        showEditor = true
     }
 
     private func requestDelete(_ theme: DarkTheme) {
@@ -338,16 +337,19 @@ struct ThemeCard: View {
                 }
 
                 HStack(spacing: 8) {
-                    VStack(alignment: .leading, spacing: 3) {
+                    VStack(alignment: .leading, spacing: 6) {
                         Text(theme.localizedDisplayName(language: appLanguage))
                             .font(SustainabilityTypography.bodyStrong)
                             .lineLimit(1)
-                        Text(eyeCareBadgeText)
-                            .font(SustainabilityTypography.caption)
-                            .foregroundColor(SustainabilityPalette.primary)
-                        Text(LocalizedStringKey(isDefault ? "当前默认主题" : "点击可设为默认"))
-                            .font(SustainabilityTypography.caption)
-                            .foregroundColor(isDefault ? SustainabilityPalette.primary : .secondary)
+
+                        HStack(spacing: 4) {
+                            Text("等级")
+                                .font(SustainabilityTypography.caption)
+                                .foregroundColor(.secondary)
+                            Text(eyeCareStarsText)
+                                .font(SustainabilityTypography.captionStrong)
+                                .foregroundColor(SustainabilityPalette.primary)
+                        }
                     }
                     .contentShape(Rectangle())
                     .onTapGesture {
@@ -359,11 +361,11 @@ struct ThemeCard: View {
                     HStack(spacing: 6) {
                         if let onEdit {
                             Button(action: onEdit) {
-                                Image(systemName: "slider.horizontal.3")
-                                    .font(SustainabilityTypography.subBodyStrong)
-                                    .foregroundColor(SustainabilityPalette.cta)
-                                    .frame(width: 32, height: 32)
-                                    .background(SustainabilityPalette.cta.opacity(0.16))
+                                Image(systemName: "gearshape.fill")
+                                    .font(.system(size: 11, weight: .semibold))
+                                    .foregroundColor(.secondary)
+                                    .frame(width: 26, height: 26)
+                                    .background(Color.secondary.opacity(0.14))
                                     .clipShape(Circle())
                             }
                             .buttonStyle(.plain)
@@ -375,7 +377,7 @@ struct ThemeCard: View {
                                 Image(systemName: "trash")
                                     .font(SustainabilityTypography.captionStrong)
                                     .foregroundColor(.secondary)
-                                    .frame(width: 32, height: 32)
+                                    .frame(width: 26, height: 26)
                                     .background(Color.secondary.opacity(0.14))
                                     .clipShape(Circle())
                             }
@@ -400,10 +402,8 @@ struct ThemeCard: View {
         }
     }
 
-    private var eyeCareBadgeText: String {
-        let stars = String(repeating: "★", count: max(theme.eyeCareScore, 1))
-        let blanks = String(repeating: "☆", count: max(5 - theme.eyeCareScore, 0))
-        return "🟢 护眼 \(stars)\(blanks)"
+    private var eyeCareStarsText: String {
+        String(repeating: "★", count: max(theme.eyeCareScore, 1))
     }
 }
 
@@ -419,13 +419,13 @@ struct ThemeLibraryView: View {
                 SustainabilityBackground()
 
                 ScrollView {
-                    VStack(alignment: .leading, spacing: 16) {
+                    VStack(alignment: .leading, spacing: SustainabilityMetrics.sectionGap) {
                         ForEach(groupedPresets, id: \.0) { section in
                             VStack(alignment: .leading, spacing: 8) {
-                                Text(LocalizedStringKey(section.0))
-                                    .font(SustainabilityTypography.bodyStrong)
-                                    .foregroundColor(.secondary)
-                                    .padding(.horizontal)
+                                    Text(LocalizedStringKey(section.0))
+                                        .font(SustainabilityTypography.bodyStrong)
+                                        .foregroundColor(.secondary)
+                                        .padding(.horizontal, SustainabilityMetrics.pageHorizontalPadding)
 
                                 SustainabilityCard {
                                     VStack(spacing: 0) {
@@ -443,12 +443,12 @@ struct ThemeLibraryView: View {
                                         }
                                     }
                                 }
-                                .padding(.horizontal)
+                                .padding(.horizontal, SustainabilityMetrics.pageHorizontalPadding)
                             }
                         }
                     }
-                    .padding(.bottom, 28)
-                    .padding(.top, 8)
+                    .padding(.bottom, SustainabilityMetrics.pageBottomPadding)
+                    .padding(.top, SustainabilityMetrics.pageTopPadding - 4)
                 }
                 .font(SustainabilityTypography.body)
             }

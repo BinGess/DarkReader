@@ -3,32 +3,32 @@ import SwiftUI
 enum SustainabilityPalette {
     static let primary = Color(hex: "#F59E0B") ?? .orange
     static let secondary = Color(hex: "#FBBF24") ?? .yellow
-    static let cta = Color(hex: "#8B5CF6") ?? .purple
+    static let cta = Color(hex: "#6366F1") ?? .indigo
     static let info = Color(hex: "#38BDF8") ?? .blue
     static let neutral = Color(hex: "#94A3B8") ?? .gray
     static let warm = Color(hex: "#F97316") ?? .orange
     static let success = Color(hex: "#22C55E") ?? .green
     static let danger = Color(hex: "#EF4444") ?? .red
 
-    static let backgroundLightTop = Color(hex: "#F8FAFC") ?? Color(.systemGroupedBackground)
-    static let backgroundLightBottom = Color(hex: "#E2E8F0") ?? Color(.secondarySystemGroupedBackground)
-    static let backgroundDarkTop = Color(hex: "#0B1020") ?? Color(.systemBackground)
-    static let backgroundDarkBottom = Color(hex: "#141B34") ?? Color(.secondarySystemBackground)
+    static let backgroundLightTop = Color(hex: "#F7FAFF") ?? Color(.systemGroupedBackground)
+    static let backgroundLightBottom = Color(hex: "#E6EDF7") ?? Color(.secondarySystemGroupedBackground)
+    static let backgroundDarkTop = Color(hex: "#0C1224") ?? Color(.systemBackground)
+    static let backgroundDarkBottom = Color(hex: "#182240") ?? Color(.secondarySystemBackground)
 
     static func surface(_ scheme: ColorScheme) -> Color {
-        scheme == .dark ? Color.white.opacity(0.08) : Color.white.opacity(0.86)
+        scheme == .dark ? Color.white.opacity(0.1) : Color.white.opacity(0.9)
     }
 
     static func border(_ scheme: ColorScheme) -> Color {
-        scheme == .dark ? Color.white.opacity(0.2) : Color(hex: "#CBD5E1") ?? Color.gray.opacity(0.2)
+        scheme == .dark ? Color.white.opacity(0.18) : Color(hex: "#D1D9E6") ?? Color.gray.opacity(0.2)
     }
 
     static func elevated(_ scheme: ColorScheme) -> Color {
-        scheme == .dark ? Color.white.opacity(0.06) : Color.black.opacity(0.04)
+        scheme == .dark ? Color.white.opacity(0.08) : Color.black.opacity(0.03)
     }
 
     static func chromeBackground(_ scheme: ColorScheme) -> Color {
-        scheme == .dark ? (Color(hex: "#0F172A") ?? .black).opacity(0.94) : Color.white.opacity(0.95)
+        scheme == .dark ? (Color(hex: "#0F172A") ?? .black).opacity(0.92) : Color.white.opacity(0.97)
     }
 
     static func headline(_ scheme: ColorScheme) -> Color {
@@ -41,18 +41,29 @@ enum SustainabilityPalette {
 }
 
 enum SustainabilityTypography {
-    static let title = Font.system(size: 18, weight: .semibold, design: .rounded)
+    static let title = Font.system(size: 17, weight: .semibold, design: .rounded)
     static let body = Font.system(size: 16, weight: .regular, design: .rounded)
     static let bodyStrong = Font.system(size: 16, weight: .semibold, design: .rounded)
     static let subBody = Font.system(size: 14, weight: .regular, design: .rounded)
     static let subBodyStrong = Font.system(size: 14, weight: .semibold, design: .rounded)
-    static let caption = Font.system(size: 13, weight: .regular, design: .rounded)
-    static let captionStrong = Font.system(size: 13, weight: .semibold, design: .rounded)
+    static let caption = Font.system(size: 12, weight: .regular, design: .rounded)
+    static let captionStrong = Font.system(size: 12, weight: .semibold, design: .rounded)
 }
 
 enum SustainabilityMetrics {
     static let touchMinHeight: CGFloat = 44
-    static let rowVerticalPadding: CGFloat = 6
+    static let rowVerticalPadding: CGFloat = 8
+    static let cardInnerPadding: CGFloat = 14
+    static let pageHorizontalPadding: CGFloat = 16
+    static let pageTopPadding: CGFloat = 12
+    static let pageBottomPadding: CGFloat = 28
+    static let sectionGap: CGFloat = 14
+    static let listRowInsetVertical: CGFloat = 8
+    static let listRowInsetHorizontal: CGFloat = 16
+    static let heroCornerRadius: CGFloat = 20
+    static let moduleCornerRadius: CGFloat = 16
+    static let controlCornerRadius: CGFloat = 12
+    static let cardCornerRadius: CGFloat = 18
 }
 
 struct SustainabilityBackground: View {
@@ -99,7 +110,7 @@ struct SustainabilityCard<Content: View>: View {
 
     var body: some View {
         content
-            .padding(14)
+            .padding(SustainabilityMetrics.cardInnerPadding)
             .background(SustainabilityCardBackground())
     }
 }
@@ -108,7 +119,7 @@ private struct SustainabilityCardBackground: View {
     @Environment(\.colorScheme) private var colorScheme
 
     var body: some View {
-        RoundedRectangle(cornerRadius: 16, style: .continuous)
+        RoundedRectangle(cornerRadius: SustainabilityMetrics.cardCornerRadius, style: .continuous)
             .fill(
                 LinearGradient(
                     colors: [
@@ -120,10 +131,10 @@ private struct SustainabilityCardBackground: View {
                 )
             )
             .overlay(
-                RoundedRectangle(cornerRadius: 16, style: .continuous)
+                RoundedRectangle(cornerRadius: SustainabilityMetrics.cardCornerRadius, style: .continuous)
                     .stroke(SustainabilityPalette.border(colorScheme), lineWidth: 1)
             )
-            .shadow(color: Color.black.opacity(colorScheme == .dark ? 0.32 : 0.07), radius: 18, x: 0, y: 10)
+            .shadow(color: Color.black.opacity(colorScheme == .dark ? 0.28 : 0.06), radius: 14, x: 0, y: 8)
     }
 }
 
@@ -162,13 +173,14 @@ struct SustainabilitySectionTitle: View {
     }
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 2) {
+        VStack(alignment: .leading, spacing: 1) {
             Text(LocalizedStringKey(title))
                 .font(SustainabilityTypography.title)
             if let subtitle {
                 Text(LocalizedStringKey(subtitle))
                     .font(SustainabilityTypography.caption)
                     .foregroundColor(.secondary)
+                    .lineSpacing(1)
             }
         }
     }

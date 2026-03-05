@@ -15,7 +15,7 @@ struct WebsiteSettingsView: View {
             SustainabilityBackground()
 
             ScrollView {
-                VStack(spacing: 16) {
+                VStack(spacing: SustainabilityMetrics.sectionGap) {
                     overviewCard
 
                     if dataManager.visitedDomainsSorted.isEmpty {
@@ -24,14 +24,15 @@ struct WebsiteSettingsView: View {
                         domainsCard
                     }
                 }
-                .padding(.horizontal, 18)
-                .padding(.top, 14)
-                .padding(.bottom, 30)
+                .padding(.horizontal, SustainabilityMetrics.pageHorizontalPadding)
+                .padding(.top, SustainabilityMetrics.pageTopPadding)
+                .padding(.bottom, SustainabilityMetrics.pageBottomPadding)
             }
             .font(SustainabilityTypography.body)
         }
         .navigationTitle("网站设置")
         .navigationBarTitleDisplayMode(.inline)
+        .sustainabilityChrome()
     }
 
     private var overviewCard: some View {
@@ -98,7 +99,7 @@ struct WebsiteSettingsView: View {
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding(.vertical, 12)
-        .padding(.horizontal, 14)
+        .padding(.horizontal, SustainabilityMetrics.cardInnerPadding)
         .background(Color.secondary.opacity(0.1))
         .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
     }
@@ -132,7 +133,7 @@ struct WebsiteSettingDetailView: View {
 
     let domain: String
 
-    @State private var selectedMode: SiteMode = .follow
+    @State private var selectedMode: SiteMode = .smart
     @State private var selectedThemeId = ""
     @State private var useCustomColors = false
     @State private var showColorEditor = false
@@ -164,7 +165,7 @@ struct WebsiteSettingDetailView: View {
             SustainabilityBackground()
 
             ScrollView {
-                VStack(alignment: .leading, spacing: 16) {
+                VStack(alignment: .leading, spacing: SustainabilityMetrics.sectionGap) {
                     headerBlock
                     defaultSettingCard
                     fineTuningCard
@@ -173,7 +174,7 @@ struct WebsiteSettingDetailView: View {
                         colorPreviewCard
                     }
                 }
-                .padding(.top, 14)
+                .padding(.top, SustainabilityMetrics.pageTopPadding)
                 .padding(.bottom, 98)
             }
             .font(SustainabilityTypography.body)
@@ -205,6 +206,7 @@ struct WebsiteSettingDetailView: View {
                 refreshColorFromTheme()
             }
         }
+        .sustainabilityChrome()
     }
 
     private var headerBlock: some View {
@@ -239,7 +241,7 @@ struct WebsiteSettingDetailView: View {
                 Spacer()
             }
         }
-        .padding(.horizontal, 18)
+        .padding(.horizontal, SustainabilityMetrics.pageHorizontalPadding)
     }
 
     private var defaultSettingCard: some View {
@@ -263,7 +265,7 @@ struct WebsiteSettingDetailView: View {
                 colorRow
             }
         }
-        .padding(.horizontal, 18)
+        .padding(.horizontal, SustainabilityMetrics.pageHorizontalPadding)
     }
 
     private var modeRow: some View {
@@ -276,9 +278,10 @@ struct WebsiteSettingDetailView: View {
             }
 
             Picker("模式", selection: $selectedMode) {
-                Text("自动").tag(SiteMode.follow)
+                Text("跟随系统").tag(SiteMode.system)
                 Text("开启").tag(SiteMode.on)
                 Text("关闭").tag(SiteMode.off)
+                Text("智能开启").tag(SiteMode.smart)
             }
             .pickerStyle(.segmented)
 
@@ -400,7 +403,7 @@ struct WebsiteSettingDetailView: View {
                 focusModeRow
             }
         }
-        .padding(.horizontal, 18)
+        .padding(.horizontal, SustainabilityMetrics.pageHorizontalPadding)
     }
 
     private var brightnessRow: some View {
@@ -511,7 +514,7 @@ struct WebsiteSettingDetailView: View {
                 .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
             }
         }
-        .padding(.horizontal, 18)
+        .padding(.horizontal, SustainabilityMetrics.pageHorizontalPadding)
     }
 
     private var siteColorEditorSheet: some View {
@@ -594,24 +597,24 @@ struct WebsiteSettingDetailView: View {
             .buttonStyle(.borderedProminent)
             .tint(SustainabilityPalette.primary)
         }
-        .padding(14)
+        .padding(SustainabilityMetrics.cardInnerPadding)
         .background(
             Color(.systemBackground).opacity(colorScheme == .dark ? 0.9 : 0.96),
-            in: RoundedRectangle(cornerRadius: 24, style: .continuous)
+            in: RoundedRectangle(cornerRadius: 22, style: .continuous)
         )
         .overlay(
-            RoundedRectangle(cornerRadius: 24, style: .continuous)
+            RoundedRectangle(cornerRadius: 22, style: .continuous)
                 .stroke(Color.primary.opacity(0.08), lineWidth: 1)
         )
         .shadow(
-            color: Color.black.opacity(colorScheme == .dark ? 0.28 : 0.14),
-            radius: 20,
+            color: Color.black.opacity(colorScheme == .dark ? 0.22 : 0.1),
+            radius: 14,
             x: 0,
-            y: 10
+            y: 6
         )
-        .padding(.horizontal, 14)
-        .padding(.top, 10)
-        .padding(.bottom, 10)
+        .padding(.horizontal, SustainabilityMetrics.pageHorizontalPadding)
+        .padding(.top, SustainabilityMetrics.pageTopPadding)
+        .padding(.bottom, SustainabilityMetrics.pageTopPadding)
     }
 
     private var selectedThemeDisplayName: String {
@@ -624,8 +627,10 @@ struct WebsiteSettingDetailView: View {
 
     private var modeDescription: String {
         switch selectedMode {
-        case .follow:
-            return "website.modeDescription.follow"
+        case .follow, .smart:
+            return "website.modeDescription.smart"
+        case .system:
+            return "website.modeDescription.system"
         case .on:
             return "website.modeDescription.on"
         case .off:
@@ -635,8 +640,10 @@ struct WebsiteSettingDetailView: View {
 
     private var modeBadgeText: String {
         switch selectedMode {
-        case .follow:
-            return "website.modeBadge.follow"
+        case .follow, .smart:
+            return "website.modeBadge.smart"
+        case .system:
+            return "website.modeBadge.system"
         case .on:
             return "website.modeBadge.on"
         case .off:
@@ -646,8 +653,10 @@ struct WebsiteSettingDetailView: View {
 
     private var modeBadgeColor: Color {
         switch selectedMode {
-        case .follow:
+        case .follow, .system:
             return .secondary
+        case .smart:
+            return SustainabilityPalette.cta
         case .on:
             return SustainabilityPalette.success
         case .off:
@@ -659,9 +668,20 @@ struct WebsiteSettingDetailView: View {
         [backgroundColor, textColor, secondaryTextColor, linkColor, borderColor]
     }
 
+    private func normalizeMode(_ mode: SiteMode?) -> SiteMode {
+        switch mode {
+        case .follow:
+            return .smart
+        case .some(let resolved):
+            return resolved
+        case .none:
+            return .smart
+        }
+    }
+
     private func setupInitialState() {
         let rule = dataManager.siteRules[domain]
-        selectedMode = rule?.mode ?? .follow
+        selectedMode = normalizeMode(rule?.mode)
         selectedThemeId = rule?.themeId ?? ""
         useCustomColors = selectedThemeId == dedicatedThemeId
         brightness = rule?.brightness ?? 1.0
@@ -682,7 +702,7 @@ struct WebsiteSettingDetailView: View {
     }
 
     private func saveSiteSettings() {
-        var modeForRule: SiteMode? = selectedMode == .follow ? nil : selectedMode
+        var modeForRule: SiteMode? = selectedMode == .smart ? nil : selectedMode
         var themeIdForRule: String? = selectedThemeId.isEmpty ? nil : selectedThemeId
 
         if useCustomColors {
@@ -706,7 +726,7 @@ struct WebsiteSettingDetailView: View {
             } else {
                 dataManager.updateTheme(siteTheme)
             }
-            modeForRule = selectedMode == .follow ? nil : selectedMode
+            modeForRule = selectedMode == .smart ? nil : selectedMode
             themeIdForRule = dedicatedThemeId
         }
 
@@ -724,7 +744,7 @@ struct WebsiteSettingDetailView: View {
     }
 
     private func resetToDefault() {
-        selectedMode = .follow
+        selectedMode = .smart
         selectedThemeId = ""
         useCustomColors = false
         brightness = 1.0
@@ -870,7 +890,11 @@ private struct WebsiteDomainRow: View {
             return "website.status.off"
         case .on:
             return "website.status.on"
-        case .follow, .none:
+        case .system:
+            return "website.status.system"
+        case .smart, .follow:
+            return "website.status.smart"
+        case .none:
             return "website.status.followDefault"
         }
     }
@@ -881,6 +905,10 @@ private struct WebsiteDomainRow: View {
             return SustainabilityPalette.success
         case .some(.off):
             return SustainabilityPalette.neutral
+        case .some(.system):
+            return .secondary
+        case .some(.smart), .some(.follow):
+            return SustainabilityPalette.cta
         default:
             return SustainabilityPalette.cta
         }

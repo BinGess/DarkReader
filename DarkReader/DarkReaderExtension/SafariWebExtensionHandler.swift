@@ -60,6 +60,9 @@ class SafariWebExtensionHandler: NSObject, NSExtensionRequestHandling {
         case "getThemes":
             responseData = ["themes": dataStore.allThemesAsDicts()]
 
+        case "getEyeCareSummary":
+            responseData = dataStore.buildEyeCareSummary()
+
         case "saveRule":
             let domain = messageDict["domain"] as? String ?? ""
             let rule   = messageDict["rule"]   as? [String: Any] ?? [:]
@@ -229,6 +232,13 @@ private class ExtensionDataStore {
         return visited
     }
 
+    var eyeCareDailyRecords: [DailyEyeCareRecord] {
+        guard let data = defaults.data(forKey: SharedKeys.eyeCareDailyRecords),
+              let records = try? JSONDecoder().decode([DailyEyeCareRecord].self, from: data)
+        else { return [] }
+        return records
+    }
+
     // MARK: - 构建响应
 
     /// 构建给 background.js 的完整配置响应
@@ -252,7 +262,7 @@ private class ExtensionDataStore {
                 "ignoreNativeDarkMode": config.ignoreNativeDarkMode,
                 "performanceMode": config.performanceMode,
                 "appLanguage": config.appLanguage.rawValue,
-                "siteMode": rule?.mode?.rawValue ?? "follow",
+                "siteMode": rule?.mode?.rawValue ?? "smart",
                 "siteThemeId": rule?.themeId ?? "",
                 // 定时深色模式
                 "scheduleEnabled": config.scheduleEnabled,
@@ -299,6 +309,16 @@ private class ExtensionDataStore {
         ]
     }
 
+    /// 构建 popup 顶部护眼摘要（与主 App 首页统计口径一致）
+    func buildEyeCareSummary() -> [String: Any] {
+        let todayRecord = todayEyeCareRecord
+        let reductionPercent = Int(estimatedBlueLightReduction(for: todayRecord) * 100)
+        return [
+            "durationSeconds": todayRecord.darkModeDuration,
+            "reductionPercent": reductionPercent
+        ]
+    }
+
     /// 将所有主题序列化为 JS 可读的字典数组
     func allThemesAsDicts() -> [[String: Any]] {
         allThemes.map { theme in
@@ -318,6 +338,28 @@ private class ExtensionDataStore {
                 "warmthLevel": theme.warmthLevel
             ] as [String: Any]
         }
+    }
+
+    private var todayEyeCareRecord: DailyEyeCareRecord {
+        let calendar = Calendar.current
+        let today = calendar.startOfDay(for: Date())
+        return eyeCareDailyRecords.first { calendar.isDate($0.date, inSameDayAs: today) }
+            ?? DailyEyeCareRecord(
+                date: today,
+                darkModeDuration: 0,
+                sitesCount: 0,
+                dominantThemeId: globalConfig.defaultThemeId
+            )
+    }
+
+    private func estimatedBlueLightReduction(for record: DailyEyeCareRecord) -> Double {
+        guard record.darkModeDuration > 0 else { return 0 }
+        let theme = allThemes.first(where: { $0.id == record.dominantThemeId })
+            ?? allThemes.first(where: { $0.id == globalConfig.defaultThemeId })
+            ?? DarkTheme.builtins[1]
+        let baseReduction = 0.30 + Double(max(theme.eyeCareScore - 1, 0)) * 0.04
+        let warmBonus = theme.warmthLevel >= 4 ? 0.10 : 0.0
+        return min(max(baseReduction + warmBonus, 0.30), 0.60)
     }
 
     // MARK: - 写入

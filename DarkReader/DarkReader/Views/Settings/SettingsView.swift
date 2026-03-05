@@ -10,6 +10,7 @@ import StoreKit
 import UserNotifications
 
 struct SettingsView: View {
+    @Environment(\.dismiss) private var dismiss
     @EnvironmentObject var dataManager: SharedDataManager
     @EnvironmentObject var notificationManager: EyeCareNotificationManager
     @StateObject private var iCloudSync = iCloudSyncManager.shared
@@ -24,25 +25,37 @@ struct SettingsView: View {
     @State private var showFeedbackList = false
 
     var body: some View {
-        NavigationView {
-            ZStack {
-                SustainabilityBackground()
+        ZStack {
+            SustainabilityBackground()
 
-                ScrollView {
-                    VStack(spacing: 12) {
-                        syncCard
-                        eyeCareNotificationCard
-                        guideCard
-                        dataCard
-                        aboutCard
-                    }
-                    .padding(16)
-                    .padding(.bottom, 24)
+            ScrollView {
+                VStack(spacing: SustainabilityMetrics.sectionGap) {
+                    syncCard
+                    eyeCareNotificationCard
+                    guideCard
+                    dataCard
+                    aboutCard
                 }
-                .font(SustainabilityTypography.body)
+                .padding(.horizontal, SustainabilityMetrics.pageHorizontalPadding)
+                .padding(.top, SustainabilityMetrics.pageTopPadding)
+                .padding(.bottom, SustainabilityMetrics.pageBottomPadding)
             }
-            .navigationTitle(localized("设置", fallback: "Settings"))
-            .navigationBarTitleDisplayMode(.inline)
+            .font(SustainabilityTypography.body)
+        }
+        .navigationTitle("Settings")
+        .navigationBarTitleDisplayMode(.inline)
+        .navigationBarBackButtonHidden(true)
+        .toolbar {
+            ToolbarItem(placement: .navigationBarLeading) {
+                Button {
+                    dismiss()
+                } label: {
+                    HStack(spacing: 4) {
+                        Image(systemName: "chevron.left")
+                        Text("Back")
+                    }
+                }
+            }
         }
         .sustainabilityChrome()
         .sheet(isPresented: $showPrivacy) { PrivacyView() }
@@ -509,14 +522,6 @@ struct SettingsView: View {
         String(format: NSLocalizedString(key, comment: ""), count)
     }
 
-    private func localized(_ key: String, fallback: String) -> String {
-        DarkTheme.localizedString(
-            key: key,
-            fallback: fallback,
-            language: dataManager.globalConfig.appLanguage
-        )
-    }
-
     private func saveConfigAndReschedule() {
         dataManager.saveConfig()
         notificationManager.syncSchedule()
@@ -567,7 +572,14 @@ struct FeedbackListView: View {
                         }
                     }
                     .listRowBackground(Color.clear)
-                    .listRowInsets(EdgeInsets(top: 6, leading: 16, bottom: 6, trailing: 16))
+                    .listRowInsets(
+                        EdgeInsets(
+                            top: SustainabilityMetrics.listRowInsetVertical,
+                            leading: SustainabilityMetrics.listRowInsetHorizontal,
+                            bottom: SustainabilityMetrics.listRowInsetVertical,
+                            trailing: SustainabilityMetrics.listRowInsetHorizontal
+                        )
+                    )
                     .listRowSeparator(.hidden)
                 }
                 .listStyle(.plain)

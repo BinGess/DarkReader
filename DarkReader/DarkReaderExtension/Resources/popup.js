@@ -3,7 +3,7 @@
  *
  * 负责：
  *   1. 展示当前域名
- *   2. 模式切换（跟随/开启/关闭）
+ *   2. 模式切换（跟随系统/始终开启/始终关闭/智能开启）
  *   3. 主题切换
  *   4. 当前站点暂停/恢复
  *   5. 用户反馈提交
@@ -12,40 +12,41 @@
 'use strict';
 
 let currentDomain = '';
-let currentMode = 'follow';
+let currentMode = 'smart';
 // ★ currentThemeId 现在代表全局默认主题 ID（globalConfig.defaultThemeId）
 //   而不是站点级覆盖主题（siteThemeId），确保与主 App 双向同步
 let currentThemeId = '';
 let isPaused = false;
 let allThemes = [];
+let eyeCareSummary = { durationSeconds: 0, reductionPercent: 0 };
 let currentLanguage = 'zhHans';
 const SUPPORT_EMAIL = 'baibin1989@gmail.com';
 const POPUP_LANGUAGE_STORAGE_KEY = 'popupLanguage';
 
 const I18N = {
   zhHans: {
-    brandName: '夜览',
+    brandName: '护眼模式',
     hero: {
-      panelAria: '夜览当前站点控制面板',
-      kicker: '当前站点策略',
-      subtitle: '简洁控制，即时生效'
+      panelAria: '护眼模式当前站点控制面板',
+      status: '护眼模式正在开启中"'
     },
     pause: {
       title: '暂停或恢复当前站点',
-      banner: '当前站点策略已暂停。',
+      banner: '护眼模式已暂停。',
       resume: '恢复'
     },
     labels: {
-      mode: '站点模式',
-      theme: '站点主题'
+      mode: '护眼模式',
+      theme: '护眼主题'
     },
     mode: {
-      follow: '跟随',
-      on: '开启',
-      off: '关闭'
+      system: '跟随系统',
+      on: '始终开启',
+      off: '始终关闭',
+      smart: '智能开启'
     },
     theme: {
-      followDefault: '跟随默认',
+      followDefault: '默认护眼主题',
       builtinGroup: '内置主题',
       customGroup: '自定义主题',
       theme_001: '纯黑 OLED',
@@ -57,6 +58,11 @@ const I18N = {
       openSettings: '打开设置',
       reportIssue: '报告问题'
     },
+    stats: {
+      durationLabel: '已开启时长',
+      reductionLabel: '蓝光减少估算',
+      reductionPrefix: '约'
+    },
     feedback: {
       title: '反馈问题',
       closeAria: '关闭反馈面板',
@@ -64,7 +70,7 @@ const I18N = {
       submit: '提交反馈',
       submitting: '提交中...',
       emailOpened: '已打开邮件',
-      mailSubjectPrefix: '[夜览] 问题反馈',
+      mailSubjectPrefix: '[护眼模式] 问题反馈',
       mailGreeting: '你好，以下是用户提交的问题反馈：',
       mailSite: '网站',
       mailTheme: '主题',
@@ -78,25 +84,25 @@ const I18N = {
     }
   },
   en: {
-    brandName: 'AutoDark',
+    brandName: 'Eye-care Mode',
     hero: {
-      panelAria: 'AutoDark current site control panel',
-      kicker: 'Current Site Strategy',
-      subtitle: 'Simple controls, instant effect'
+      panelAria: 'Eye-care mode current site control panel',
+      status: 'Eye-care mode is currently active.'
     },
     pause: {
       title: 'Pause or resume current site',
-      banner: 'Dark strategy is paused on this site.',
+      banner: 'Eye-care mode is paused on this site.',
       resume: 'Resume'
     },
     labels: {
-      mode: 'Site Mode',
-      theme: 'Site Theme'
+      mode: 'Eye-care Mode',
+      theme: 'Eye-care Theme'
     },
     mode: {
-      follow: 'Follow',
-      on: 'On',
-      off: 'Off'
+      system: 'Follow System',
+      on: 'Always On',
+      off: 'Always Off',
+      smart: 'Smart On'
     },
     theme: {
       followDefault: 'Follow Default',
@@ -111,6 +117,11 @@ const I18N = {
       openSettings: 'Open Settings',
       reportIssue: 'Report Issue'
     },
+    stats: {
+      durationLabel: 'Eye-care Duration',
+      reductionLabel: 'Blue Light Reduced',
+      reductionPrefix: '~'
+    },
     feedback: {
       title: 'Report an Issue',
       closeAria: 'Close feedback panel',
@@ -118,7 +129,7 @@ const I18N = {
       submit: 'Submit Feedback',
       submitting: 'Submitting...',
       emailOpened: 'Email Opened',
-      mailSubjectPrefix: '[AutoDark] Issue Feedback',
+      mailSubjectPrefix: '[Eye-care Mode] Issue Feedback',
       mailGreeting: 'Hi, here is a user issue report:',
       mailSite: 'Site',
       mailTheme: 'Theme',
@@ -141,6 +152,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 async function initialize() {
   currentLanguage = loadPersistedLanguage();
   document.getElementById('domainLabel').textContent = t('domain.loading');
+  await loadEyeCareSummary();
 
   const tabs = await browser.tabs.query({ active: true, currentWindow: true });
   const tab = tabs[0];
@@ -160,7 +172,7 @@ async function initialize() {
   });
 
   if (result) {
-    currentMode = result.config?.siteMode || 'follow';
+    currentMode = normalizeSiteMode(result.config?.siteMode);
     // ★ 关键修复：主题用 defaultThemeId（全局默认），不用 siteThemeId（站点覆盖）
     //   这样主 App 设置的默认主题能在 popup 中正确显示
     currentThemeId = result.config?.defaultThemeId || 'theme_002';
@@ -208,13 +220,13 @@ function applyI18n() {
   document.documentElement.lang = currentLanguage === 'en' ? 'en' : 'zh-CN';
   document.title = t('brandName');
 
-  setText('heroTitle', t('brandName'));
-  setText('heroKicker', t('hero.kicker'));
-  setText('heroSubtitle', t('hero.subtitle'));
+  setText('heroStatusText', t('hero.status'));
   setText('pauseBannerText', t('pause.banner'));
   setText('resumeBtn', t('pause.resume'));
   setText('modeLabel', t('labels.mode'));
   setText('themeLabel', t('labels.theme'));
+  setText('eyeCareDurationLabel', t('stats.durationLabel'));
+  setText('eyeCareReductionLabel', t('stats.reductionLabel'));
   setText('openAppBtnText', t('actions.openSettings'));
   setText('reportBtnText', t('actions.reportIssue'));
   setText('feedbackTitle', t('feedback.title'));
@@ -255,6 +267,8 @@ function applyI18n() {
   if (!currentDomain) {
     setText('domainLabel', t('domain.unknown'));
   }
+
+  renderEyeCareSummary();
 }
 
 function renderModeControl() {
@@ -310,10 +324,34 @@ function renderPauseState() {
   pauseBanner.classList.toggle('hidden', !isPaused);
 }
 
+async function loadEyeCareSummary() {
+  try {
+    const result = await browser.runtime.sendMessage({ action: 'getEyeCareSummary' });
+    eyeCareSummary = {
+      durationSeconds: Number(result?.durationSeconds || 0),
+      reductionPercent: Number(result?.reductionPercent || 0)
+    };
+  } catch (_) {
+    eyeCareSummary = { durationSeconds: 0, reductionPercent: 0 };
+  }
+}
+
+function renderEyeCareSummary() {
+  const safeDuration = Number.isFinite(eyeCareSummary.durationSeconds)
+    ? Math.max(eyeCareSummary.durationSeconds, 0)
+    : 0;
+  const safeReduction = Number.isFinite(eyeCareSummary.reductionPercent)
+    ? Math.min(Math.max(Math.trunc(eyeCareSummary.reductionPercent), 0), 100)
+    : 0;
+
+  setText('eyeCareDurationValue', formatDuration(safeDuration));
+  setText('eyeCareReductionValue', `${t('stats.reductionPrefix')} ${safeReduction}%`);
+}
+
 function bindEvents() {
   document.querySelectorAll('#modeControl .seg-btn').forEach(btn => {
     btn.addEventListener('click', async () => {
-      currentMode = btn.dataset.value;
+      currentMode = normalizeSiteMode(btn.dataset.value);
       renderModeControl();
       await saveRuleAndNotify();
     });
@@ -431,11 +469,11 @@ function bindEvents() {
   });
 }
 
-// ★ 仅保存当前站点的 Mode 规则（开启/关闭/跟随）
+// ★ 仅保存当前站点的 Mode 规则（system/on/off/smart）
 //   主题同步已独立处理（直接写 globalConfig.defaultThemeId），不在此混入
 async function saveRuleAndNotify() {
   const rule = {
-    mode: currentMode,
+    mode: normalizeSiteMode(currentMode),
     themeId: '' // 主题覆盖由主题选择器单独处理，此处不传递
   };
 
@@ -463,6 +501,26 @@ function extractDomain(url) {
   } catch {
     return '';
   }
+}
+
+function normalizeSiteMode(mode) {
+  if (mode === 'system' || mode === 'on' || mode === 'off' || mode === 'smart') {
+    return mode;
+  }
+  // 兼容历史值
+  if (mode === 'follow') return 'smart';
+  return 'smart';
+}
+
+function formatDuration(seconds) {
+  if (!seconds || seconds <= 0) return '0m';
+  const totalMinutes = Math.floor(seconds / 60);
+  const hours = Math.floor(totalMinutes / 60);
+  const minutes = totalMinutes % 60;
+  if (hours > 0) {
+    return `${hours}h ${minutes}m`;
+  }
+  return `${minutes}m`;
 }
 
 function defaultThemes() {

@@ -731,7 +731,11 @@ struct SiteRule: Codable, Equatable {
 
     init(from decoder: Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
-        self.mode = try container.decodeIfPresent(SiteMode.self, forKey: .mode)
+        if let modeRaw = try container.decodeIfPresent(String.self, forKey: .mode) {
+            self.mode = SiteMode(rawValue: modeRaw) ?? .smart
+        } else {
+            self.mode = nil
+        }
         self.themeId = try container.decodeIfPresent(String.self, forKey: .themeId)
         self.updatedAt = try container.decodeIfPresent(Date.self, forKey: .updatedAt) ?? Date(timeIntervalSince1970: 0)
         self.brightness = min(max(try container.decodeIfPresent(Double.self, forKey: .brightness) ?? 1.0, 0.5), 1.5)
@@ -752,8 +756,10 @@ struct SiteRule: Codable, Equatable {
 
 enum SiteMode: String, Codable {
     case follow
+    case system
     case on
     case off
+    case smart
 }
 
 typealias SiteRules = [String: SiteRule]

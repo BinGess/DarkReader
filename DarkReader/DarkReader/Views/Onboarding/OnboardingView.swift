@@ -63,7 +63,7 @@ struct OnboardingView: View {
             .padding(.bottom, 24)
 
             Text(NSLocalizedString("brand.appName", comment: ""))
-                .font(.system(size: 36, weight: .bold))
+                .font(.system(size: 34, weight: .bold, design: .rounded))
                 .padding(.bottom, 4)
 
             Spacer()
@@ -82,8 +82,7 @@ struct OnboardingView: View {
             } label: {
                 Text("开始引导")
                     .font(SustainabilityTypography.bodyStrong)
-                    .frame(maxWidth: .infinity)
-                    .padding()
+                    .frame(maxWidth: .infinity, minHeight: SustainabilityMetrics.touchMinHeight + 4)
                     .background(SustainabilityPalette.primary)
                     .foregroundColor(.white)
                     .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
@@ -148,6 +147,7 @@ struct OnboardingView: View {
                     }
                     .buttonStyle(.bordered)
                     .tint(SustainabilityPalette.cta)
+                    .frame(minHeight: SustainabilityMetrics.touchMinHeight)
                     .frame(maxWidth: .infinity)
                 }
 
@@ -165,6 +165,7 @@ struct OnboardingView: View {
                 }
                 .buttonStyle(.borderedProminent)
                 .tint(SustainabilityPalette.primary)
+                .frame(minHeight: SustainabilityMetrics.touchMinHeight)
                 .frame(maxWidth: .infinity)
             }
             .padding(.horizontal, 24)
@@ -182,7 +183,7 @@ struct OnboardingView: View {
                 .padding(.bottom, 20)
 
             Text("扩展启用成功")
-                .font(.system(size: 30, weight: .bold))
+                .font(.system(size: 28, weight: .bold, design: .rounded))
                 .padding(.bottom, 8)
 
             Text("已完成配置，深色模式默认跟随系统。现在可以在 Safari 中体验统一的可读性优化。")
@@ -202,8 +203,7 @@ struct OnboardingView: View {
 #endif
                 } label: {
                     Label("立即打开 Safari 体验", systemImage: "safari.fill")
-                        .frame(maxWidth: .infinity)
-                        .padding()
+                        .frame(maxWidth: .infinity, minHeight: SustainabilityMetrics.touchMinHeight + 4)
                         .background(SustainabilityPalette.primary)
                         .foregroundColor(.white)
                         .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
@@ -213,8 +213,7 @@ struct OnboardingView: View {
                     hasCompletedOnboarding = true
                 } label: {
                     Text("进入应用")
-                        .frame(maxWidth: .infinity)
-                        .padding()
+                        .frame(maxWidth: .infinity, minHeight: SustainabilityMetrics.touchMinHeight + 4)
                         .background(Color.white.opacity(0.7))
                         .foregroundColor(.primary)
                         .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))

@@ -57,13 +57,13 @@ struct GuideCenterView: View {
                 SustainabilityBackground()
 
                 ScrollView {
-                    VStack(spacing: 16) {
+                    VStack(spacing: SustainabilityMetrics.sectionGap) {
                         guideCard
                         faqCard
                     }
-                    .padding(.horizontal, 18)
-                    .padding(.top, 14)
-                    .padding(.bottom, 30)
+                    .padding(.horizontal, SustainabilityMetrics.pageHorizontalPadding)
+                    .padding(.top, SustainabilityMetrics.pageTopPadding)
+                    .padding(.bottom, SustainabilityMetrics.pageBottomPadding)
                 }
                 .font(SustainabilityTypography.body)
             }
@@ -477,12 +477,12 @@ private struct GuideScaffold<Content: View>: View {
             SustainabilityBackground()
 
             ScrollView {
-                VStack(spacing: 16) {
+                VStack(spacing: SustainabilityMetrics.sectionGap) {
                     content()
                 }
-                .padding(.horizontal, 18)
-                .padding(.top, 14)
-                .padding(.bottom, 30)
+                .padding(.horizontal, SustainabilityMetrics.pageHorizontalPadding)
+                .padding(.top, SustainabilityMetrics.pageTopPadding)
+                .padding(.bottom, SustainabilityMetrics.pageBottomPadding)
             }
             .font(SustainabilityTypography.body)
         }
@@ -672,24 +672,24 @@ private struct GuideBottomActionBar: View {
                 .buttonStyle(.borderedProminent)
                 .tint(SustainabilityPalette.primary)
         }
-        .padding(14)
+        .padding(SustainabilityMetrics.cardInnerPadding)
         .background(
             Color(.systemBackground).opacity(colorScheme == .dark ? 0.9 : 0.96),
-            in: RoundedRectangle(cornerRadius: 24, style: .continuous)
+            in: RoundedRectangle(cornerRadius: 22, style: .continuous)
         )
         .overlay(
-            RoundedRectangle(cornerRadius: 24, style: .continuous)
+            RoundedRectangle(cornerRadius: 22, style: .continuous)
                 .stroke(Color.primary.opacity(0.08), lineWidth: 1)
         )
         .shadow(
-            color: Color.black.opacity(colorScheme == .dark ? 0.28 : 0.14),
-            radius: 20,
+            color: Color.black.opacity(colorScheme == .dark ? 0.22 : 0.1),
+            radius: 14,
             x: 0,
-            y: 10
+            y: 6
         )
-        .padding(.horizontal, 14)
-        .padding(.top, 10)
-        .padding(.bottom, 10)
+        .padding(.horizontal, SustainabilityMetrics.pageHorizontalPadding)
+        .padding(.top, SustainabilityMetrics.pageTopPadding)
+        .padding(.bottom, SustainabilityMetrics.pageTopPadding)
     }
 }
 

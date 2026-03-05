@@ -22,15 +22,15 @@ struct ScheduleView: View {
             SustainabilityBackground()
 
             ScrollView {
-                VStack(spacing: 14) {
+                VStack(spacing: SustainabilityMetrics.sectionGap) {
                     explainCard
                     scheduleCard
                     statusCard
                     tipsCard
                 }
-                .padding(.horizontal, 16)
-                .padding(.top, 10)
-                .padding(.bottom, 30)
+                .padding(.horizontal, SustainabilityMetrics.pageHorizontalPadding)
+                .padding(.top, SustainabilityMetrics.pageTopPadding)
+                .padding(.bottom, SustainabilityMetrics.pageBottomPadding)
             }
             .font(SustainabilityTypography.body)
         }

@@ -619,23 +619,43 @@ ${cookieSelectors.join(',\n')} {
     if (isPaused) return false;
     if (!currentConfig) return false;
 
-    const siteMode = currentConfig.siteMode || 'follow';
+    const siteMode = currentConfig.siteMode || 'smart';
 
     // 站点规则优先级最高
     if (siteMode === 'on') return true;
     if (siteMode === 'off') return false;
+    if (siteMode === 'system') {
+      return window.matchMedia('(prefers-color-scheme: dark)').matches;
+    }
+    if (siteMode === 'smart') {
+      // 智能开启：优先按定时策略，未启用定时时回退到系统深色偏好
+      return resolveSmartActivation(currentConfig);
+    }
 
+    // 兼容历史规则 follow：沿用旧逻辑（跟随全局模式）
+    if (siteMode === 'follow') {
+      return resolveLegacyFollowActivation(currentConfig);
+    }
+
+    // 未知模式兜底：按智能开启处理
+    return resolveSmartActivation(currentConfig);
+  }
+
+  function resolveLegacyFollowActivation(config) {
     // 跟随全局配置
-    if (currentConfig.mode === 'on') return true;
-    if (currentConfig.mode === 'off') return false;
+    if (config.mode === 'on') return true;
+    if (config.mode === 'off') return false;
+    return resolveSmartActivation(config);
+  }
 
+  function resolveSmartActivation(config) {
     // 定时模式（优先于 auto 的系统跟随）
-    if (currentConfig.scheduleEnabled) {
-      const triggerSource = currentConfig.scheduleTriggerSource || 'manual';
+    if (config.scheduleEnabled) {
+      const triggerSource = config.scheduleTriggerSource || 'manual';
       if (triggerSource === 'system') {
         return window.matchMedia('(prefers-color-scheme: dark)').matches;
       }
-      return isInScheduledTime(currentConfig);
+      return isInScheduledTime(config);
     }
 
     // auto 模式：跟随系统 prefers-color-scheme
@@ -1025,7 +1045,7 @@ ${cookieSelectors.join(',\n')} {
         break;
 
       case 'setMode':
-        // popup 修改站点模式（follow/on/off）
+        // popup 修改站点模式（system/on/off/smart）
         if (currentConfig) {
           currentConfig.siteMode = message.mode;
         }

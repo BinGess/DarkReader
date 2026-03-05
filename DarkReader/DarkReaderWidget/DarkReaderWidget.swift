@@ -168,8 +168,90 @@ private enum EyeCareWidgetStore {
     }
 }
 
+private extension Color {
+    init(rgb: UInt32, opacity: Double = 1) {
+        self.init(
+            .sRGB,
+            red: Double((rgb >> 16) & 0xFF) / 255.0,
+            green: Double((rgb >> 8) & 0xFF) / 255.0,
+            blue: Double(rgb & 0xFF) / 255.0,
+            opacity: opacity
+        )
+    }
+}
+
+private enum WidgetPalette {
+    static let primary = Color(rgb: 0xF59E0B)
+    static let cta = Color(rgb: 0x8B5CF6)
+    static let info = Color(rgb: 0x38BDF8)
+
+    static func backgroundTop(_ scheme: ColorScheme) -> Color {
+        scheme == .dark ? Color(rgb: 0x0B1020) : Color(rgb: 0xF8FAFC)
+    }
+
+    static func backgroundBottom(_ scheme: ColorScheme) -> Color {
+        scheme == .dark ? Color(rgb: 0x141B34) : Color(rgb: 0xE2E8F0)
+    }
+
+    static func elevated(_ scheme: ColorScheme) -> Color {
+        scheme == .dark ? Color.white.opacity(0.08) : Color.black.opacity(0.05)
+    }
+
+    static func title(_ scheme: ColorScheme) -> Color {
+        scheme == .dark ? Color(rgb: 0xF8FAFC) : Color(rgb: 0x0F172A)
+    }
+
+    static func body(_ scheme: ColorScheme) -> Color {
+        scheme == .dark ? Color(rgb: 0xCBD5E1) : Color(rgb: 0x475569)
+    }
+}
+
+private enum WidgetTypography {
+    static let title = Font.system(size: 13, weight: .semibold, design: .rounded)
+    static let metric = Font.system(size: 26, weight: .bold, design: .rounded)
+    static let subtitle = Font.system(size: 12, weight: .medium, design: .rounded)
+    static let statTitle = Font.system(size: 11, weight: .medium, design: .rounded)
+    static let statValue = Font.system(size: 14, weight: .semibold, design: .rounded)
+}
+
+private struct WidgetSurfaceBackground: View {
+    @Environment(\.colorScheme) private var colorScheme
+
+    var body: some View {
+        ZStack {
+            LinearGradient(
+                colors: [
+                    WidgetPalette.backgroundTop(colorScheme),
+                    WidgetPalette.backgroundBottom(colorScheme)
+                ],
+                startPoint: .topLeading,
+                endPoint: .bottomTrailing
+            )
+
+            Circle()
+                .fill(WidgetPalette.primary.opacity(colorScheme == .dark ? 0.16 : 0.2))
+                .frame(width: 180)
+                .blur(radius: 18)
+                .offset(x: -86, y: -90)
+
+            Circle()
+                .fill(WidgetPalette.cta.opacity(colorScheme == .dark ? 0.14 : 0.16))
+                .frame(width: 160)
+                .blur(radius: 16)
+                .offset(x: 96, y: 90)
+
+            Circle()
+                .fill(WidgetPalette.info.opacity(colorScheme == .dark ? 0.08 : 0.1))
+                .frame(width: 120)
+                .blur(radius: 14)
+                .offset(x: 70, y: -72)
+        }
+    }
+}
+
 private struct EyeCareWidgetView: View {
     @Environment(\.widgetFamily) private var family
+    @Environment(\.colorScheme) private var colorScheme
     var entry: EyeCareTimelineProvider.Entry
 
     var body: some View {
@@ -181,22 +263,31 @@ private struct EyeCareWidgetView: View {
     }
 
     private var smallBody: some View {
-        VStack(alignment: .leading, spacing: 6) {
-            Text("今日护眼")
-                .font(.system(size: 14, weight: .semibold))
+        VStack(alignment: .leading, spacing: 10) {
+            HStack(spacing: 6) {
+                Image(systemName: "moon.stars.fill")
+                    .font(.system(size: 11, weight: .semibold))
+                    .foregroundColor(WidgetPalette.primary)
+                Text("今日护眼")
+                    .font(WidgetTypography.title)
+                    .foregroundColor(WidgetPalette.title(colorScheme))
+                Spacer(minLength: 0)
+            }
+
             Text(formatDuration(entry.snapshot.todayDuration))
-                .font(.system(size: 24, weight: .bold, design: .rounded))
+                .font(WidgetTypography.metric)
+                .foregroundColor(WidgetPalette.title(colorScheme))
                 .lineLimit(1)
                 .minimumScaleFactor(0.7)
 
-            if entry.snapshot.estimatedReduction > 0 {
-                Text("蓝光减少约 \(entry.snapshot.estimatedReduction)%")
-                    .font(.system(size: 12, weight: .medium))
-                    .foregroundStyle(.secondary)
-            } else {
-                Text("开启夜览后自动统计")
-                    .font(.system(size: 12, weight: .medium))
-                    .foregroundStyle(.secondary)
+            Text(reductionDescription)
+                .font(WidgetTypography.subtitle)
+                .foregroundColor(WidgetPalette.body(colorScheme))
+                .lineLimit(1)
+
+            HStack(spacing: 8) {
+                compactStat(title: "网站", value: "\(entry.snapshot.todaySitesCount)")
+                compactStat(title: "活跃", value: "\(entry.snapshot.weeklyActiveDays)/7")
             }
 
             Spacer(minLength: 0)
@@ -206,38 +297,49 @@ private struct EyeCareWidgetView: View {
     }
 
     private var mediumBody: some View {
-        VStack(alignment: .leading, spacing: 10) {
+        VStack(alignment: .leading, spacing: 12) {
             HStack(alignment: .top) {
                 VStack(alignment: .leading, spacing: 4) {
                     Text("今日护眼")
-                        .font(.system(size: 14, weight: .semibold))
+                        .font(WidgetTypography.title)
+                        .foregroundColor(WidgetPalette.title(colorScheme))
                     Text(formatDuration(entry.snapshot.todayDuration))
-                        .font(.system(size: 26, weight: .bold, design: .rounded))
+                        .font(WidgetTypography.metric)
+                        .foregroundColor(WidgetPalette.title(colorScheme))
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.75)
                 }
                 Spacer()
-                VStack(alignment: .trailing, spacing: 4) {
-                    Text("网站")
-                        .font(.system(size: 12, weight: .medium))
-                        .foregroundStyle(.secondary)
-                    Text("\(entry.snapshot.todaySitesCount) 个")
-                        .font(.system(size: 16, weight: .semibold))
-                }
+                accentPill(
+                    icon: "globe",
+                    text: "\(entry.snapshot.todaySitesCount) 个网站",
+                    tint: WidgetPalette.info
+                )
             }
 
-            Divider()
+            Text(reductionDescription)
+                .font(WidgetTypography.subtitle)
+                .foregroundColor(WidgetPalette.body(colorScheme))
+                .lineLimit(1)
 
-            HStack {
+            HStack(spacing: 8) {
                 statChip(
                     title: "本周时长",
-                    value: formatDuration(entry.snapshot.weeklyTotalDuration)
+                    value: formatDuration(entry.snapshot.weeklyTotalDuration),
+                    icon: "clock.fill",
+                    tint: WidgetPalette.primary
                 )
                 statChip(
                     title: "护眼天数",
-                    value: "\(entry.snapshot.weeklyActiveDays)/7"
+                    value: "\(entry.snapshot.weeklyActiveDays)/7",
+                    icon: "calendar",
+                    tint: WidgetPalette.cta
                 )
                 statChip(
                     title: "蓝光减少",
-                    value: entry.snapshot.estimatedReduction > 0 ? "\(entry.snapshot.estimatedReduction)%" : "--"
+                    value: entry.snapshot.estimatedReduction > 0 ? "\(entry.snapshot.estimatedReduction)%" : "--",
+                    icon: "sun.max.trianglebadge.exclamationmark",
+                    tint: WidgetPalette.info
                 )
             }
         }
@@ -245,17 +347,72 @@ private struct EyeCareWidgetView: View {
         .widgetBackground
     }
 
-    private func statChip(title: String, value: String) -> some View {
+    private var reductionDescription: String {
+        entry.snapshot.estimatedReduction > 0
+            ? "蓝光减少约 \(entry.snapshot.estimatedReduction)%"
+            : "开启夜览后自动统计"
+    }
+
+    private func compactStat(title: String, value: String) -> some View {
         VStack(alignment: .leading, spacing: 2) {
             Text(title)
-                .font(.system(size: 11, weight: .medium))
-                .foregroundStyle(.secondary)
+                .font(WidgetTypography.statTitle)
+                .foregroundColor(WidgetPalette.body(colorScheme))
             Text(value)
-                .font(.system(size: 15, weight: .semibold))
+                .font(WidgetTypography.statValue)
+                .foregroundColor(WidgetPalette.title(colorScheme))
                 .lineLimit(1)
-                .minimumScaleFactor(0.75)
         }
         .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(.vertical, 7)
+        .padding(.horizontal, 8)
+        .background(WidgetPalette.elevated(colorScheme))
+        .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
+    }
+
+    private func accentPill(icon: String, text: String, tint: Color) -> some View {
+        HStack(spacing: 5) {
+            Image(systemName: icon)
+                .font(.system(size: 10, weight: .semibold))
+            Text(text)
+                .font(WidgetTypography.subtitle)
+                .lineLimit(1)
+        }
+        .foregroundColor(tint)
+        .padding(.horizontal, 10)
+        .padding(.vertical, 7)
+        .background(tint.opacity(colorScheme == .dark ? 0.2 : 0.14))
+        .clipShape(Capsule())
+        .overlay(
+            Capsule()
+                .stroke(tint.opacity(0.45), lineWidth: 0.8)
+        )
+    }
+
+    private func statChip(title: String, value: String, icon: String, tint: Color) -> some View {
+        VStack(spacing: 3) {
+            HStack(spacing: 4) {
+                Image(systemName: icon)
+                    .font(.system(size: 10, weight: .semibold))
+                Text(title)
+                    .font(WidgetTypography.statTitle)
+                    .lineLimit(1)
+            }
+            .foregroundColor(WidgetPalette.body(colorScheme))
+            .frame(maxWidth: .infinity, alignment: .center)
+            Text(value)
+                .font(WidgetTypography.statValue)
+                .foregroundColor(tint)
+                .lineLimit(1)
+                .minimumScaleFactor(0.75)
+                .frame(maxWidth: .infinity, alignment: .center)
+        }
+        .multilineTextAlignment(.center)
+        .frame(maxWidth: .infinity, alignment: .center)
+        .padding(.vertical, 8)
+        .padding(.horizontal, 8)
+        .background(WidgetPalette.elevated(colorScheme))
+        .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
     }
 
     private func formatDuration(_ value: TimeInterval) -> String {
@@ -274,10 +431,12 @@ private extension View {
     @ViewBuilder
     var widgetBackground: some View {
         if #available(iOS 17.0, *) {
-            self.containerBackground(.fill.tertiary, for: .widget)
+            self.containerBackground(for: .widget) {
+                WidgetSurfaceBackground()
+            }
         } else {
             self
-                .background(Color(UIColor.secondarySystemBackground))
+                .background(WidgetSurfaceBackground())
         }
     }
 }

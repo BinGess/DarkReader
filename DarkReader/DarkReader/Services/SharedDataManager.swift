@@ -628,7 +628,7 @@ extension SharedDataManager {
                 "ignoreNativeDarkMode": globalConfig.ignoreNativeDarkMode,
                 "performanceMode": globalConfig.performanceMode,
                 "appLanguage": globalConfig.appLanguage.rawValue,
-                "siteMode": rule?.mode?.rawValue ?? "follow",
+                "siteMode": rule?.mode?.rawValue ?? "smart",
                 "siteThemeId": rule?.themeId ?? "",
                 "scheduleEnabled": globalConfig.scheduleEnabled,
                 "scheduleTriggerSource": globalConfig.scheduleTriggerSource.rawValue,
